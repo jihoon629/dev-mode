@@ -8,33 +8,78 @@ app.controller('AppCtrl', function($scope, appFactory){
   $("#success_qurey").hide();
   $("#success_invoke").hide();
   $("#success_delete").hide();
-  $("#success_query_all").hide(); // Query All 성공 메시지 숨김
+  $("#success_query_all").hide();
+  $("#success_deposit").hide();
+  $("#success_withdraw").hide(); // 출금 성공 메시지 숨김 추가
   $("#error_invoke").hide();
   $("#error_delete").hide();
-  $("#error_query_all").hide(); // Query All 에러 메시지 숨김
-  $("#error_query").hide(); // Query 에러 메시지 숨김 추가
-  $scope.query_all_result = []; // 결과 배열 초기화
+  $("#error_query_all").hide();
+  $("#error_query").hide();
+  $("#error_deposit").hide();
+  $("#error_withdraw").hide(); // 출금 에러 메시지 숨김 추가
 
+  $scope.query_all_result = [];
+  $scope.abstore = { a: '', aval: 0 };
+  $scope.deposit = { amount: null }; // 입금 폼 데이터 모델 (ID 없음)
+  $scope.withdraw = { amount: null }; // 출금 폼 데이터 모델 추가
+  $scope.storedUserId = sessionStorage.getItem('userId'); // 세션 ID 가져오기
 
-   $scope.initAB = function(){
-       appFactory.initAB($scope.abstore, function(data){
-           // 응답 처리는 기존과 동일하게 유지하거나 필요에 따라 수정
-           if(data == "")
-           $scope.init_ab = "success";
-           $("#success_init").show();
-           $("#error_invoke").hide();
-           $("#error_delete").hide();
-       });
-   }
-//    $scope.queryAB = function(){
-//        // Query 부분은 변경하지 않음 (파라미터 이름 불일치 문제는 별도)
-//        appFactory.queryAB($scope.walletid, function(data){
-//            $scope.query_ab = data;
-//            $("#success_qurey").show();
-//            $("#error_invoke").hide();
-//            $("#error_delete").hide();
-//        });
-//    }
+  // (선택 사항) 세션 ID를 스코프에 바인딩하여 HTML에 표시
+  $scope.storedUserId = sessionStorage.getItem('userId');
+  if (!$scope.storedUserId) {
+      console.warn("세션 스토리지에 사용자 ID가 없습니다. 먼저 지갑을 생성/초기화해주세요.");
+      // 필요시 사용자에게 메시지 표시
+  }
+  $scope.initAB = function(){
+    // 입력된 아이디가 있는지 확인
+    if ($scope.abstore && $scope.abstore.a && $scope.abstore.a.trim() !== '') {
+        // 1. 아이디를 sessionStorage에 저장 ('userId'라는 키 사용)
+        try {
+            sessionStorage.setItem('userId', $scope.abstore.a.trim());
+            console.log('사용자 ID가 세션 스토리지에 저장되었습니다:', $scope.abstore.a.trim());
+
+            // 2. 기존 팩토리 호출하여 원장 초기화/지갑 생성 요청
+            appFactory.initAB($scope.abstore, function(data){
+                // 응답 데이터가 비어있거나, 성공을 나타내는 특정 형태인지 확인
+                // (서버 응답 형식에 따라 이 조건은 달라질 수 있습니다)
+                if(data === "" || (data && data.result === "success")) { // 서버 응답이 비어있거나 성공 객체일 경우
+                     // 성공 메시지 설정 (저장된 ID 포함)
+                    $scope.init_ab = "지갑 생성/초기화 성공 (ID: " + $scope.abstore.a.trim() + ")";
+                    $("#success_init").show();
+                    $("#error_invoke").hide(); // 다른 오류 메시지 숨김
+                    $("#error_delete").hide();
+
+                    // 선택 사항: 성공 후 입력 필드 초기화
+                    // $scope.abstore.a = '';
+
+                } else {
+                    // 실패 처리 (서버에서 오류 메시지를 보낸다고 가정)
+                    let errorMessage = "지갑 생성/초기화 실패";
+                    if (data && data.error) {
+                         errorMessage += ": " + data.error;
+                    } else if (typeof data === 'string' && data.length > 0) {
+                         errorMessage += ": " + data;
+                    }
+                     $scope.init_ab = errorMessage;
+                    $("#success_init").show(); // 실패 메시지도 같은 영역에 표시 (필요시 다른 요소 사용)
+                    console.error("지갑 생성/초기화 실패 응답:", data);
+                }
+            });
+
+        } catch (e) {
+            // sessionStorage 저장 실패 처리 (예: Quota 초과 등)
+            console.error("세션 스토리지 저장 실패:", e);
+            $scope.init_ab = "오류: 세션 스토리지에 ID를 저장할 수 없습니다.";
+            $("#success_init").show();
+        }
+
+    } else {
+        // 아이디가 입력되지 않은 경우
+        $scope.init_ab = "오류: 지갑 생성을 위한 아이디를 입력해주세요.";
+        $("#success_init").show(); // 오류 메시지 표시
+         console.warn("지갑 생성을 위한 아이디가 입력되지 않았습니다.");
+    }
+}; 
 $scope.queryAB = function(){
     // walletid는 index.html의 ng-model="walletid"와 일치
     var walletIdToQuery = $scope.walletid;
@@ -205,24 +250,135 @@ $scope.deleteAccount = function(){
     });
 }
 
+
+$scope.depositMoney = function(){
+    console.log("Deposit button clicked. Amount:", $scope.deposit.amount);
+    $("#success_deposit").hide(); // 이전 메시지 숨김
+    $("#error_deposit").hide();
+
+    // 1. 세션 스토리지에서 ID 가져오기
+    const id = sessionStorage.getItem('userId');
+    const amount = $scope.deposit.amount;
+
+    // 2. ID 및 금액 유효성 검증
+    if (!id) {
+        $scope.deposit_error = "세션에 저장된 Wallet ID가 없습니다. 먼저 지갑을 생성해주세요.";
+        $("#error_deposit").show();
+        return;
+    }
+    if (amount === null || amount === undefined || amount <= 0 || isNaN(amount)) {
+         $scope.deposit_error = "입금할 금액을 올바르게 입력해주세요 (양수).";
+         $("#error_deposit").show();
+         return;
+    }
+
+    // 3. 팩토리 함수 호출 (ID와 금액 전달)
+    // deposit.id 대신 세션에서 가져온 id 사용
+    appFactory.depositMoney({ id: id, amount: amount }, function(data, status){
+        console.log("Response from /deposit:", status, data);
+        if(status === 200 && (data === "" || (data && data.result === "success"))) { // 성공 응답
+            $scope.deposit_msg = `ID '${id}'에 ${amount} 입금 성공!`;
+            $("#success_deposit").show();
+            // 성공 시 금액 입력 필드 초기화 (선택 사항)
+            $scope.deposit.amount = null;
+        } else { // 오류 응답
+            let errorMsg = "입금 실패: ";
+            if (data && data.error) {
+                 errorMsg += data.error;
+            } else if (typeof data === 'string' && data.length > 0) {
+                errorMsg += data;
+            } else {
+                 errorMsg += `Status ${status}`;
+            }
+            $scope.deposit_error = errorMsg;
+            $("#error_deposit").show();
+        }
+        // 다른 섹션 메시지 숨김 ... (기존과 동일)
+        $("#success_init").hide();
+        $("#success_qurey").hide();
+        // ... (나머지 메시지 숨김 코드) ...
+    });
+}; // $scope.depositMoney 끝
+
+
+// --- 새로운 함수: 돈 출금 ---
+$scope.withdrawMoney = function(){
+    console.log("Withdraw button clicked. Amount:", $scope.withdraw.amount);
+    $("#success_withdraw").hide(); // 이전 메시지 숨김
+    $("#error_withdraw").hide();
+
+    // 1. 세션 스토리지에서 ID 가져오기
+    const id = sessionStorage.getItem('userId');
+    const amount = $scope.withdraw.amount;
+
+    // 2. ID 및 금액 유효성 검증
+    if (!id) {
+        $scope.withdraw_error = "세션에 저장된 Wallet ID가 없습니다. 먼저 지갑을 생성해주세요.";
+        $("#error_withdraw").show();
+        return;
+    }
+    if (amount === null || amount === undefined || amount <= 0 || isNaN(amount)) {
+         $scope.withdraw_error = "출금할 금액을 올바르게 입력해주세요 (양수).";
+         $("#error_withdraw").show();
+         return;
+    }
+
+    // 3. 팩토리 함수 호출 (ID와 금액 전달)
+    appFactory.withdrawMoney({ id: id, amount: amount }, function(data, status){
+        console.log("Response from /withdraw:", status, data);
+        if(status === 200 && (data === "" || (data && data.result === "success"))) { // 성공 응답
+            $scope.withdraw_msg = `ID '${id}'에서 ${amount} 출금 성공!`;
+            $("#success_withdraw").show();
+            // 성공 시 금액 입력 필드 초기화 (선택 사항)
+            $scope.withdraw.amount = null;
+        } else { // 오류 응답
+            let errorMsg = "출금 실패: ";
+            if (data && data.error) {
+                // 체인코드에서 보낸 오류 메시지 (예: "insufficient funds...") 포함
+                 errorMsg += data.error;
+            } else if (typeof data === 'string' && data.length > 0) {
+                errorMsg += data;
+            } else {
+                 errorMsg += `Status ${status}`;
+            }
+            $scope.withdraw_error = errorMsg;
+            $("#error_withdraw").show();
+        }
+        // 다른 섹션 메시지 숨김
+        $("#success_init").hide();
+        $("#success_qurey").hide();
+        $("#success_invoke").hide();
+        $("#success_delete").hide();
+        $("#success_query_all").hide();
+        $("#success_deposit").hide();
+        $("#error_init").hide();
+        $("#error_qurey").hide();
+        $("#error_invoke").hide();
+        $("#error_delete").hide();
+        $("#error_query_all").hide();
+        $("#error_deposit").hide();
+    });
+};
+
 });
 app.factory('appFactory', function($http){
 
     var factory = {};
 
     factory.initAB = function(data, callback){
-        // GET 요청 URL에 c와 cval 파라미터 추가
-        $http.get('/init?a='+data.a+'&aval='+data.aval+'&b='+data.b+'&bval='+data.bval+'&c='+data.c+'&cval='+data.cval).success(function(output){
-            callback(output)
+        // GET 요청 URL 생성 (aval은 0으로 고정됨)
+        // data.a에 trim()을 적용하여 앞뒤 공백 제거
+        const id = data.a ? data.a.trim() : '';
+        const value = data.aval !== undefined ? data.aval : 0; // aval이 없으면 0 사용
+
+        $http.get('/init?a='+encodeURIComponent(id)+'&aval='+value).success(function(output){
+            callback(output);
+        }).error(function(error){ // HTTP 요청 실패 시 처리
+             console.error("HTTP GET /init 요청 실패:", error);
+             callback({ error: "서버 통신 오류" }); // 오류 콜백 호출
         });
-    }
-    // factory.queryAB = function(name, callback){
-    //     // Query 부분은 변경하지 않음 (파라미터 이름 불일치 문제는 별도)
-    //     $http.get('/query?name='+name).success(function(output){
-    //         callback(output)
-    //     });
-        
-    // }
+    };
+
     factory.queryAB = function(name, callback){
         $http.get('/query?name='+name)
             .success(function(output){
@@ -234,8 +390,6 @@ app.factory('appFactory', function($http){
                 callback(output, status);
             });
     }
-
-
 
        // invoke 팩토리 함수 추가
        factory.invoke = function(data, callback){
@@ -261,5 +415,46 @@ app.factory('appFactory', function($http){
             .success(function(output){ callback(output, 200); })
             .error(function(output, status){ callback(output, status); });
     }
+
+        // --- 새로운 팩토리 함수: 돈 충전 ---
+        factory.depositMoney = function(data, callback){
+            const id = data.id ? data.id.trim() : '';
+            const amount = data.amount;
+    
+            // id와 amount 값이 유효한지 한번 더 확인 (컨트롤러에서 했지만 안전하게)
+            if (!id || amount === undefined || amount === null || amount <= 0) {
+                 // 실제 요청을 보내지 않고 오류 콜백 호출
+                 // status 400은 임의로 지정 (클라이언트 측 오류)
+                 callback({ error: "Invalid ID or amount provided to factory." }, 400);
+                 return;
+            }
+    
+            // GET 요청으로 /deposit 엔드포인트 호출
+            $http.get('/deposit?id='+encodeURIComponent(id)+'&amount='+amount)
+                .success(function(output){ callback(output, 200); }) // 성공 시
+                .error(function(output, status){ callback(output, status); }); // 실패 시
+        };
+
+
+
+    // --- 새로운 팩토리 함수: 돈 출금 ---
+    factory.withdrawMoney = function(data, callback){
+        const id = data.id ? data.id.trim() : '';
+        const amount = data.amount;
+
+        // 간단한 유효성 검증 (선택 사항)
+        if (!id || amount === undefined || amount === null || amount <= 0) {
+             callback({ error: "Invalid ID or amount provided to withdraw factory." }, 400);
+             return;
+        }
+
+        // GET 요청으로 /withdraw 엔드포인트 호출 (서버에 해당 엔드포인트 필요)
+        $http.get('/withdraw?id='+encodeURIComponent(id)+'&amount='+amount)
+            .success(function(output){ callback(output, 200); }) // 성공 시
+            .error(function(output, status){ callback(output, status); }); // 실패 시
+    };
+
+
+
     return factory;
  });

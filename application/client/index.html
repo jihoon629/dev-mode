@@ -235,17 +235,35 @@
     <div id="body">
 
       <div class="form-group">
-        <label>Init Ledger</label>
+        <label>지갑 생성</label>
         <!-- 인라인 스타일 제거, 클래스 적용, ng-show 사용 -->
         <h5 id="success_init" class="success-message" ng-show="init_ab">{{init_ab}}</h5>
         <br>
-        A: <input class="form-control" type="text" placeholder="Ex: Hyper" ng-model="abstore.a">
-        A Value: <input class="form-control" type="text" placeholder="Ex: 100" ng-model="abstore.aval">
-        B: <input class="form-control" type="text" placeholder="Ex: Ledger" ng-model="abstore.b">
-        B Value: <input class="form-control" type="text" placeholder="Ex: 0" ng-model="abstore.bval">
-        C: <input class="form-control" type="text" placeholder="Ex: Fabric (Fee Account)" ng-model="abstore.c">
-        C Value: <input class="form-control" type="text" placeholder="Ex: 0" ng-model="abstore.cval">
+        지갑생성 <input class="form-control" type="text" placeholder="아이디 입력" ng-model="abstore.a">
+        <input class="form-control" type="hidden" placeholder="Ex: 100" ng-model="abstore.aval" ng-init="abstore.aval=0">
         <input id="initAB" type="submit" value="Initialize" class="btn btn-primary" ng-click="initAB()">
+      </div>
+
+      <div class="form-group">
+        <label>입금 (현재 ID: {{ storedUserId }})</label> <!-- 현재 ID 표시 (선택 사항) -->
+         <!-- 성공/실패 메시지 표시 -->
+        <h5 id="success_deposit" class="success-message" ng-show="deposit_msg">{{deposit_msg}}</h5>
+        <h5 id="error_deposit" class="error-message" ng-show="deposit_err">{{deposit_err}}</h5>
+        <br>
+        <!-- ID 입력 필드 제거됨 -->
+        Amount: <input class="form-control" type="number" placeholder="Ex: 50" ng-model="deposit.amount">
+        <input id="depositMoneyBtn" type="submit" value="Deposit" class="btn btn-info" ng-click="depositMoney()">
+      </div>
+
+      <div class="form-group">
+        <label>출금 (현재 ID: {{ storedUserId }})</label> <!-- 현재 ID 표시 (선택 사항) -->
+         <!-- 성공/실패 메시지 표시 (출금 관련 변수 사용) -->
+        <h5 id="success_withdraw" class="success-message" ng-show="withdraw_msg">{{withdraw_msg}}</h5>
+        <h5 id="error_withdraw" class="error-message" ng-show="withdraw_err">{{withdraw_err}}</h5>
+        <br>
+        <!-- ID 입력 필드 제거됨 -->
+        Amount: <input class="form-control" type="number" placeholder="Ex: 30" ng-model="withdraw.amount"> <!-- ng-model 수정 -->
+        <input id="withdrawMoneyBtn" type="submit" value="Withdraw" class="btn btn-warning" ng-click="withdrawMoney()"> <!-- 버튼 ID, value, ng-click 수정, 클래스 변경(선택) -->
       </div>
 
       <hr>
