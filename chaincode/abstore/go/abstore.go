@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"time"
-
 	"github.com/google/uuid" // For generating WillID
 	"github.com/hyperledger/fabric-contract-api-go/contractapi"
 )
