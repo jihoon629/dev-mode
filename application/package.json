@@ -9,6 +9,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "connect-history-api-fallback": "^2.0.0",
     "crypto": "^1.0.1",
     "express": "^5.1.0",
     "fabric-ca-client": "^2.2.9",
