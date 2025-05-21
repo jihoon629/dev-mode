@@ -3,7 +3,6 @@ import { Link, Outlet, useNavigate } from "react-router-dom";
 import styled from "styled-components";
 import { FaFacebookF, FaTwitter, FaUser } from "react-icons/fa";
 
-
 // 전체 레이아웃
 const Container = styled.div`
   background-color: #f9fafb;
@@ -11,21 +10,6 @@ const Container = styled.div`
   display: flex;
   flex-direction: column;
 `;
-
-const NavLinkButton = styled.button`
-  background: none;
-  border: none;
-  font-size: 14px;
-  color: #4b5563;
-  cursor: pointer;
-  padding: 0;
-  text-decoration: none;
-
-  &:hover {
-    color: #6366f1;
-  }
-`;
-
 
 /* ---------------- NAVBAR ---------------- */
 
@@ -257,28 +241,18 @@ const AppLayout = () => {
   const navigate = useNavigate();
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showSignupModal, setShowSignupModal] = useState(false);
-  const handleScrollToSection = (sectionId) => {
-    navigate('/'); // 홈으로 이동
-    setTimeout(() => {
-      const section = document.getElementById(sectionId);
-      if (section) {
-        section.scrollIntoView({ behavior: 'smooth' });
-      }
-    }, 100); // 페이지 렌더링 기다리는 시간
-  };
-  
 
   return (
     <Container>
       {/* Navbar */}
       <Navbar>
         <Logo onClick={() => navigate('/')}>마침표</Logo>
-<NavMenu>
-  <NavLinkButton onClick={() => handleScrollToSection('service')}>서비스 소개</NavLinkButton>
-  <NavLinkButton onClick={() => handleScrollToSection('features')}>특징</NavLinkButton>
-  <NavLinkButton onClick={() => handleScrollToSection('review')}>이용 후기</NavLinkButton>
-  <NavLinkButton onClick={() => handleScrollToSection('faq')}>FAQ</NavLinkButton>
-</NavMenu>
+        <NavMenu>
+          <Link to="/service">서비스 소개</Link>
+          <Link to="/features">특징</Link>
+          <Link to="/review">이용 후기</Link>
+          <Link to="/faq">FAQ</Link>
+        </NavMenu>
         <NavButtons>
           <button className="login" onClick={() => setShowLoginModal(true)}>로그인</button>
           <button className="signup" onClick={() => setShowSignupModal(true)}>회원가입</button>
