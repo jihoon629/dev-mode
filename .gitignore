@@ -3,7 +3,7 @@ application/node_modules
 application/connection-org1.json
 application/wallet
 chaincode/abstore/go/go
-
+application/dev-mode-react/node_modules
 basic-network/channel-artifacts
 basic-network/organizations/ordererOrganizations
 basic-network/organizations/peerOrganizations
