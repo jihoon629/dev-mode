@@ -13,7 +13,7 @@ else
   cd ./application # application 폴더로 이동
   npm install connect-history-api-fallback
   echo "필요한거 설치됨"
-  cd ./dev-mode-react
+  cd ./client-react
   npm install
   echo "리액트 설치"
 fi
