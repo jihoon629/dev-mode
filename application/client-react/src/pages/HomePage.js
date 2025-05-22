@@ -15,32 +15,32 @@ const HomePage = () => {
     {
       title: "블록체인으로 위변조 방지",
       desc: "기록된 유언장은 변경이 불가해 위변조 걱정이 없습니다.",
-      image: "/images/B1.png",
+      image: "/images/B1.PNG",
     },
     {
       title: "법적 효력 연동",
       desc: "공증 및 인증 기관과 연동하여 법적 효력을 인정받습니다.",
-      image: "/images/B2.png",
+      image: "/images/B2.PNG",
     },
     {
       title: "가족 간 분쟁 예방",
       desc: "명확하고 안전하게 전달되어 분쟁을 예방합니다.",
-      image: "/images/B3.png",
+      image: "/images/B3.PNG",
     },
     {
       title: "암호화된 보안",
       desc: "블록체인 기반 저장과 암호화 열람으로 보안이 강화됩니다.",
-      image: "/images/B4.png",
+      image: "/images/B4.PNG",
     },
     {
       title: "분산 저장 시스템",
       desc: "유언장을 안전하게 여러 네트워크에 분산 저장합니다.",
-      image: "/images/B5.png",
+      image: "/images/B5.PNG",
     },
     {
       title: "유언장 접근 제한",
       desc: "열람 권한이 있는 사용자만 접근 가능하게 설정됩니다.",
-      image: "/images/B6.png",
+      image: "/images/B6.PNG",
     },
   ];
 
@@ -165,7 +165,7 @@ const HomePage = () => {
               <div className="preview-card-header">
                 <span className="status-tag">
                   <img
-                    src="/images/C1.png"
+                    src="/images/C1.PNG"
                     alt="암호화됨"
                     className="status-icon"
                   />
@@ -173,7 +173,7 @@ const HomePage = () => {
                 </span>
                 <span className="preview-date">
                   <img
-                    src="/images/C2.png"
+                    src="/images/C2.PNG"
                     alt="날짜"
                     className="preview-icon"
                   />
@@ -185,7 +185,7 @@ const HomePage = () => {
               </h3>
               <div className="preview-card-body">
                 <img
-                  src="/images/C3.png"
+                  src="/images/C3.PNG"
                   alt="문서 아이콘"
                   style={{ width: "32px", height: "32px" }}
                 />
@@ -195,7 +195,7 @@ const HomePage = () => {
                 <div className="preview-tag">
                   <span className="tag-label">
                     <img
-                      src="/images/C4.png"
+                      src="/images/C4.PNG"
                       alt="열람자"
                       className="tag-icon"
                     />
@@ -206,7 +206,7 @@ const HomePage = () => {
                 <div className="preview-tag">
                   <span className="tag-label">
                     <img
-                      src="/images/C5.png"
+                      src="/images/C5.PNG"
                       alt="공증 상태"
                       className="tag-icon"
                     />
@@ -309,7 +309,7 @@ const HomePage = () => {
             <div className="guide-item">
               <img
                 className="guide-icon"
-                src="/images/A1.png"
+                src="/images/A1.PNG"
                 alt="지갑 등록"
               />
               <div className="guide-text">
@@ -323,7 +323,7 @@ const HomePage = () => {
             <div className="guide-item">
               <img
                 className="guide-icon"
-                src="/images/A2.png"
+                src="/images/A2.PNG"
                 alt="유언장 생성"
               />
               <div className="guide-text">
@@ -337,7 +337,7 @@ const HomePage = () => {
             <div className="guide-item">
               <img
                 className="guide-icon"
-                src="/images/A3.png"
+                src="/images/A3.PNG"
                 alt="공증 요청"
               />
               <div className="guide-text">
@@ -359,7 +359,7 @@ const HomePage = () => {
           <div className="faq-block">
             <h4 className="faq-title">
               <img
-                src="/images/D1.png"
+                src="/images/D1.PNG"
                 alt="자주 묻는 질문"
                 className="faq-icon"
               />
