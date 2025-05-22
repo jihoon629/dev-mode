@@ -2,7 +2,7 @@
 
 if [ "$1" == "react" ]; then
   echo "React 애플리케이션을 시작합니다..."
-  cd ./application/dev-mode-react
+  cd ./application/client-react
   npm start
 else
   cd ./basic-network/
