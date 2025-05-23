@@ -2,7 +2,7 @@
 const express = require('express');
 const path = require('path');
 const pool = require('./db');
-const willRoutes = require('./routes'); // API 라우트 가져오기
+const routes = require('./routes');
 const history = require('connect-history-api-fallback'); // SPA fallback용
 
 const app = express();
@@ -17,7 +17,9 @@ app.use(express.urlencoded({ extended: true }));
 // app.use('/', willRoutes); // <--- 수정된 코드: '/will' 접두사는 routes.js 내부에서 처리하도록 하거나, 여기서 '/will'로 직접 지정
 
 // 옵션 B: routes.js가 '/register' 형태로 경로를 정의한 경우 (현재 우리가 작업한 방식)
-app.use('/will', willRoutes); // <--- 이 옵션을 사용해야 현재 routes.js와 클라이언트의 '/will/register'가 맞습니다.
+app.use('/', routes); // <--- 이 옵션을 사용해야 현재 routes.js와 클라이언트의 '/will/register'가 맞습니다.
+
+
 
 
 // 2. 정적 파일 제공을 위한 경로 설정
