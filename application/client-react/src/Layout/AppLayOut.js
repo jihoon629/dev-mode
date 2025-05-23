@@ -1,33 +1,16 @@
-import React, { useState } from "react";
+import React from "react";
 import { Link, Outlet, useNavigate } from "react-router-dom";
 import styled from "styled-components";
 import { FaFacebookF, FaTwitter, FaUser } from "react-icons/fa";
 
+/* ---------------- STYLE ---------------- */
 
-// 전체 레이아웃
 const Container = styled.div`
   background-color: #f9fafb;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
 `;
-
-const NavLinkButton = styled.button`
-  background: none;
-  border: none;
-  font-size: 14px;
-  color: #4b5563;
-  cursor: pointer;
-  padding: 0;
-  text-decoration: none;
-
-  &:hover {
-    color: #6366f1;
-  }
-`;
-
-
-/* ---------------- NAVBAR ---------------- */
 
 const Navbar = styled.header`
   display: flex;
@@ -50,9 +33,12 @@ const NavMenu = styled.nav`
   gap: 32px;
   font-size: 14px;
 
-  a {
+  button {
+    background: none;
+    border: none;
     color: #4b5563;
-    text-decoration: none;
+    font-size: 14px;
+    cursor: pointer;
 
     &:hover {
       color: #6366f1;
@@ -84,8 +70,6 @@ const NavButtons = styled.div`
     border: none;
   }
 `;
-
-/* ---------------- FOOTER ---------------- */
 
 const Footer = styled.footer`
   background-color: #1f2937;
@@ -179,109 +163,33 @@ const FooterBottom = styled.div`
   }
 `;
 
-/* ---------------- MODAL ---------------- */
-
-const ModalOverlay = styled.div`
-  position: fixed;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 2000;
-`;
-
-const ModalContent = styled.div`
-  background: white;
-  padding: 32px;
-  border-radius: 12px;
-  width: 360px;
-  max-width: 90%;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-
-  h2 {
-    margin-bottom: 16px;
-    font-size: 20px;
-  }
-
-  form {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-
-    input {
-      padding: 10px;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-    }
-
-    button[type="submit"] {
-      background-color: #6366f1;
-      color: white;
-      padding: 10px;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-
-      &:hover {
-        background-color: #4f46e5;
-      }
-    }
-  }
-
-  .footer-link {
-    margin-top: 12px;
-    font-size: 14px;
-    text-align: center;
-    color: #4b5563;
-    cursor: pointer;
-
-    &:hover {
-      color: #6366f1;
-    }
-  }
-
-  .close {
-    margin-top: 16px;
-    background: none;
-    border: none;
-    color: #6366f1;
-    cursor: pointer;
-  }
-`;
-
 /* ---------------- COMPONENT ---------------- */
 
 const AppLayout = () => {
   const navigate = useNavigate();
-  const [showLoginModal, setShowLoginModal] = useState(false);
-  const [showSignupModal, setShowSignupModal] = useState(false);
+
   const handleScrollToSection = (sectionId) => {
-    navigate('/'); // 홈으로 이동
+    navigate('/');
     setTimeout(() => {
       const section = document.getElementById(sectionId);
-      if (section) {
-        section.scrollIntoView({ behavior: 'smooth' });
-      }
-    }, 100); // 페이지 렌더링 기다리는 시간
+      if (section) section.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
   };
-  
 
   return (
     <Container>
       {/* Navbar */}
       <Navbar>
         <Logo onClick={() => navigate('/')}>마침표</Logo>
-<NavMenu>
-  <NavLinkButton onClick={() => handleScrollToSection('service')}>서비스 소개</NavLinkButton>
-  <NavLinkButton onClick={() => handleScrollToSection('features')}>특징</NavLinkButton>
-  <NavLinkButton onClick={() => handleScrollToSection('review')}>이용 후기</NavLinkButton>
-  <NavLinkButton onClick={() => handleScrollToSection('faq')}>FAQ</NavLinkButton>
-</NavMenu>
+        <NavMenu>
+          <button onClick={() => handleScrollToSection('service')}>서비스 소개</button>
+          <button onClick={() => handleScrollToSection('features')}>특징</button>
+          <button onClick={() => handleScrollToSection('review')}>이용 후기</button>
+          <button onClick={() => handleScrollToSection('faq')}>FAQ</button>
+        </NavMenu>
         <NavButtons>
-          <button className="login" onClick={() => setShowLoginModal(true)}>로그인</button>
-          <button className="signup" onClick={() => setShowSignupModal(true)}>회원가입</button>
+          <button className="login" onClick={() => navigate('/login')}>로그인</button>
+          <button className="signup" onClick={() => navigate('/register')}>회원가입</button>
         </NavButtons>
       </Navbar>
 
@@ -289,84 +197,6 @@ const AppLayout = () => {
       <main>
         <Outlet />
       </main>
-
-      {/* Login Modal */}
-      {showLoginModal && (
-        <ModalOverlay onClick={() => setShowLoginModal(false)}>
-          <ModalContent onClick={(e) => e.stopPropagation()}>
-            <h2>로그인</h2>
-            <form>
-              <input type="email" placeholder="이메일" required />
-              <input type="password" placeholder="비밀번호" required />
-              <button type="submit">로그인</button>
-            </form>
-            <div className="footer-link" onClick={() => {
-              setShowLoginModal(false);
-              setShowSignupModal(true);
-            }}>
-              아직 회원이 아니신가요? 회원가입
-            </div>
-            <button className="close" onClick={() => setShowLoginModal(false)}>닫기</button>
-          </ModalContent>
-        </ModalOverlay>
-      )}
-
-      {/* Signup Modal */}
-      
-      {showSignupModal && (
-  <ModalOverlay onClick={() => setShowSignupModal(false)}>
-    <ModalContent onClick={(e) => e.stopPropagation()}>
-      <h2>회원가입</h2>
-      <form>
-        <input type="text" placeholder="이름" required />
-        <input type="email" placeholder="이메일 (아이디)" required />
-        <input type="password" placeholder="비밀번호" required />
-        <input type="password" placeholder="비밀번호 확인" required />
-        <input type="date" placeholder="생년월일" required />
-        <input type="tel" placeholder="휴대폰 번호 (- 없이)" required />
-        <div style={{ display: "flex", gap: "8px", marginBottom: "12px" }}>
-  <input
-    type="text"
-    placeholder="인증번호 입력"
-    style={{
-      flex: 2,
-      padding: "10px",
-      border: "1px solid #ccc",
-      borderRadius: "8px",
-      width: "20px",
-    }}
-  />
-  <button
-    type="button"
-    style={{
-      flex: 1,
-      background: "#6366f1",
-      color: "#fff",
-      border: "none",
-      borderRadius: "8px",
-      padding: "10px",
-      fontSize: "15px",
-      cursor: "pointer",
-      whiteSpace: "nowrap",
-      height: "42px"  // 입력창과 높이 맞추기
-    }}
-  >
-    인증 요청
-  </button>
-</div>
-        <button type="submit">회원가입</button>
-      </form>
-      <div className="footer-link" onClick={() => {
-        setShowSignupModal(false);
-        setShowLoginModal(true);
-      }}>
-        이미 계정이 있으신가요? 로그인
-      </div>
-      <button className="close" onClick={() => setShowSignupModal(false)}>닫기</button>
-    </ModalContent>
-  </ModalOverlay>
-)}
-
 
       {/* Footer */}
       <Footer>

@@ -14,7 +14,7 @@ const AppRouter = () => {
     <Routes>
       {/* AppLayout을 기본 레이아웃으로 적용 */}
       <Route element={<AppLayOut />}>
-        <Route path="/" element={<MyPage />} />
+        <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/mypage" element={<MyPage />} />
         <Route path="/register" element={<RegisterPage />} />
