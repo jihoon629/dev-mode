@@ -7,8 +7,9 @@ import MyPage from "../pages/MyPage";
 import RegisterPage from "../pages/RegisterPage";
 import NotFoundPage from "../pages/NotFoundPage";
 import WillWritePage from "../pages/WillWritePage";
-import WriteSuccess from "../pages/WriteSuccess";
-
+import WillList from "../pages/WillList";
+import WillDetails from "../pages/WillDetails";
+import UserProfileComponent from "../pages/UserProfileComponent";
 const AppRouter = () => {
   return (
     <Routes>
@@ -19,7 +20,10 @@ const AppRouter = () => {
         <Route path="/mypage" element={<MyPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/write" element={<WillWritePage />} />
-        <Route path="/success" element={<WriteSuccess/>}/>
+        <Route path="/success" element={<WillList/>}/>
+        <Route path="/detail/:willId" element={<WillDetails />} />
+        <Route path="/name" element={<UserProfileComponent />} />
+
       </Route>
 
       {/* NotFoundPage를 처리하는 라우트 */}

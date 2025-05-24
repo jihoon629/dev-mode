@@ -21,4 +21,6 @@ router.post('/auth/register', userinfoController.registerUser);
 
 router.post('/auth/login', userinfoController.loginUser);
 
+router.get('/queryByName/:username', userinfoController.getUserRealNameByUsername); // 새 컨트롤러 함수 연결
+
 module.exports = router;

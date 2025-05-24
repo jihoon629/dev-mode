@@ -55,8 +55,38 @@ async function loginUser(req, res) {
 }
 
 
+async function getUserRealNameByUsername(req, res) {
+    const { username } = req.params; // URL 파라미터에서 username 추출
+
+    console.log(username);
+    if (!username) {
+        return res.status(400).json({ error: '사용자 이름을 입력하세요.' });
+    }
+
+    try {
+        // Users 테이블에서 username으로 name (실명) 컬럼을 찾는다고 가정
+        const [rows] = await pool.execute(
+            'SELECT name FROM Users WHERE username = ?',
+            [username]
+        );
+
+        if (rows.length === 0) {
+            return res.status(404).json({ error: '해당 사용자를 찾을 수 없습니다.' });
+        }
+
+        // 사용자의 실명(name)을 반환
+        res.json({ realName: rows[0].name });
+    } catch (error) {
+        console.error('실명 조회 에러:', error);
+        res.status(500).json({ error: '서버 오류로 실명 조회에 실패했습니다.' });
+    }
+}
+
+
 // 각 함수를 개별적으로 export
 module.exports = {
     registerUser,
-    loginUser
+    loginUser,
+    getUserRealNameByUsername, // 새 함수 export
+
 };

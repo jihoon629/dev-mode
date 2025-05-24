@@ -28,9 +28,8 @@ const LoginPage = () => {
       // 성공적인 응답 (보통 HTTP 200 OK)
       setMessage(`로그인 성공! 사용자 ID: ${data.userId || data.message}`);
       sessionStorage.setItem('username', username); // 세션에 username 저장
-      // setUsername(''); // 성공 후 입력 필드 초기화 (선택 사항)
-      // setPassword(''); // 성공 후 입력 필드 초기화 (선택 사항)
-      navigate('/'); // 메인 페이지로 이동
+
+      navigate('/', { state: { userLoggedIn: true } });
 
     } catch (error) {
       console.error('로그인 요청 중 에러 발생:', error);
