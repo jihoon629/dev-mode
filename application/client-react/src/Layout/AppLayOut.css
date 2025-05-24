@@ -244,3 +244,22 @@
     color: #6366f1;
     cursor: pointer;
   }
+  .app-layout-nav-buttons .username-display {
+    margin-right: 15px;
+    color: #333; /* 원하는 색상으로 변경 */
+    font-weight: bold;
+  }
+
+  .app-layout-nav-buttons .logout {
+    background-color: #dc3545; /* 로그아웃 버튼 색상 예시 */
+    color: white;
+    padding: 8px 15px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+  }
+
+  .app-layout-nav-buttons .logout:hover {
+    background-color: #c82333;
+  }

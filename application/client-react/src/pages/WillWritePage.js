@@ -130,7 +130,7 @@ const WillWritePage = () => {
     };
 
     try {
-      const response = await fetch('/will/register', {
+      const response = await fetch('/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
