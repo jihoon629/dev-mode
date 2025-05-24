@@ -104,6 +104,18 @@ export default function WillDetails() {
           </div>
         </div>
       )}
+
+
+
+           {/* 디버깅용 원본 데이터 표시 */}
+           {willData && (
+        <div style={{ marginTop: '20px', padding: '10px', border: '1px solid #ccc', backgroundColor: '#f0f0f0' }}>
+          <h4 style={{ fontSize: '1.1em', marginBottom: '10px', color: '#333' }}>원본 데이터 (디버깅용):</h4>
+          <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all', fontSize: '0.9em', backgroundColor: '#fff', padding: '10px', borderRadius: '4px' }}>
+            {JSON.stringify(willData, null, 2)}
+          </pre>
+        </div>
+      )}
     </div>
   );
 }
