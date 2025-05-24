@@ -1,61 +1,80 @@
-// src/pages/WillWritePage.js
-import React, { useState } from "react";
+// ... (기존 import 구문들)
+import React, { useState, useEffect } from "react"; // useEffect 추가
 import { FaUpload } from "react-icons/fa";
-import './WillWritePageCss/WillWritePage.css'; // CSS 파일 임포트
-import { useNavigate } from 'react-router-dom'; // useNavigate 훅 임포트
-import willService from '../services/willService'; // default export를 가져옴
+import './WillWritePageCss/WillWritePage.css';
+import { useNavigate } from 'react-router-dom';
+import willService from '../services/willService';
 
 
 const WillWritePage = () => {
-  const navigate = useNavigate(); // useNavigate 훅 사용
-  const [viewers, setViewers] = useState([
-    // 초기 열람자 데이터가 비어있도록 수정 또는 필요시 기본값 설정
-    // { name: "홍길동", desc: "배우자 & 집행인", id: "0xAbC...1234" },
-  ]);
+  const navigate = useNavigate();
+  const [viewers, setViewers] = useState([]);
   const [blockchain, setBlockchain] = useState(false);
   const [publicReq, setPublicReq] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [content, setContent] = useState("");
   const [currentStep, setCurrentStep] = useState(1);
   const [willTitle, setWillTitle] = useState("");
-  const [testatorName, setTestatorName] = useState("");
+  
+  // 화면 표시용 실명 상태
+  const [testatorDisplayRealName, setTestatorDisplayRealName] = useState(""); 
+  // 서버 전송용 username 상태 (세션에서 가져옴)
+  const [sessionUsername, setSessionUsername] = useState(""); 
+  const [isLoadingRealName, setIsLoadingRealName] = useState(true); // 실명 로딩 상태
+
   const [apiStatus, setApiStatus] = useState({
     loading: false,
     error: null,
     data: null,
   });
-  const [ocrInProgress, setOcrInProgress] = useState(false); // OCR 진행 상태 추가
-  const [ocrError, setOcrError] = useState(null); // OCR 오류 상태 추가
+  const [ocrInProgress, setOcrInProgress] = useState(false);
+  const [ocrError, setOcrError] = useState(null);
+
+  useEffect(() => {
+    // 컴포넌트 마운트 시 세션에서 username 가져와서 실명 조회
+    const usernameFromSession = sessionStorage.getItem('username');
+    if (usernameFromSession) {
+      setSessionUsername(usernameFromSession); // 서버 전송용 username 저장
+      setIsLoadingRealName(true);
+      willService.queryByName(usernameFromSession)
+        .then(response => {
+          setTestatorDisplayRealName(response.data.realName || usernameFromSession); // 화면 표시용 실명 설정
+          setIsLoadingRealName(false);
+        })
+        .catch(error => {
+          console.error("실명 조회 실패:", error);
+          setTestatorDisplayRealName(usernameFromSession); // 실패 시 username이라도 표시
+          setIsLoadingRealName(false);
+        });
+    } else {
+      // 세션에 username이 없는 경우 (예: 로그인하지 않은 상태)
+      setTestatorDisplayRealName("로그인 필요"); // 또는 다른 기본값
+      setIsLoadingRealName(false);
+      // 필요하다면 로그인 페이지로 리디렉션 등의 처리 추가
+    }
+  }, []); // 빈 배열 의존성으로 마운트 시 1회 실행
 
   const handleFileChange = async (e) => {
     const files = Array.from(e.target.files);
     setUploadedFiles(files);
 
     if (files.length > 0) {
-      const fileToProcess = files[0]; // 첫 번째 파일만 처리한다고 가정
-
+      const fileToProcess = files[0];
       setOcrInProgress(true);
       setOcrError(null);
-
       try {
-        // willService를 사용하여 OCR API 호출 - 함수 이름을 extractTextFromImage로 수정
         const response = await willService.extractTextFromImage(fileToProcess);
-
-        // axios 응답은 response.data에 실제 데이터가 들어있습니다.
         const result = response.data;
-
-        if (result.text !== undefined) { // text 속성이 있는지 확인 (빈 문자열일 수도 있음)
+        if (result.text !== undefined) {
           setContent(prevContent => prevContent ? `${prevContent}\n${result.text}` : result.text);
-          if (result.text.trim() !== "" && currentStep < 2 && willTitle.trim() !== "" && testatorName.trim() !== "") {
+          if (result.text.trim() !== "" && currentStep < 2 && willTitle.trim() !== "" && testatorDisplayRealName.trim() !== "" && testatorDisplayRealName !== "로그인 필요") {
             setCurrentStep(2);
           }
         } else {
-          // 응답은 성공(2xx)했지만, 예상한 text 필드가 없는 경우
           throw new Error("OCR API did not return text in the expected format.");
         }
       } catch (error) {
         console.error("OCR 실패:", error);
-        // axios 오류인 경우 error.response.data.error 등으로 서버에서 보낸 오류 메시지 접근 가능
         const errorMessage = error.response?.data?.error || error.message || "OCR 처리 중 알 수 없는 오류가 발생했습니다.";
         setOcrError(errorMessage);
       } finally {
@@ -64,103 +83,80 @@ const WillWritePage = () => {
     }
   };
 
-
   const handleContentChange = (e) => {
     const value = e.target.value;
     setContent(value);
-    if (value.trim() !== "" && currentStep < 2 && willTitle.trim() !== "" && testatorName.trim() !== "") {
+    if (value.trim() !== "" && currentStep < 2 && willTitle.trim() !== "" && testatorDisplayRealName.trim() !== "" && testatorDisplayRealName !== "로그인 필요") {
       setCurrentStep(2);
     }
   };
 
   const handleAddViewer = () => {
-    // viewers 배열에 빈 객체가 있는 경우, 첫번째 추가는 해당 객체를 업데이트 하거나,
-    // 빈 객체 없이 시작하고 싶다면 초기 상태를 []로 변경하는 것을 고려해주세요.
-    // 현재는 무조건 새 열람자를 추가합니다.
     const newViewer = { name: "새 열람자", desc: "관계", id: "0xNew...5678" };
     setViewers((prev) => {
-        // 초기 상태가 [{}] 이고, 첫번째 viewer가 비어있다면 그걸 채우는 로직이 필요할 수 있습니다.
-        // 여기서는 간단하게 항상 추가하는 로직으로 갑니다.
-        // 만약 prev가 [{}] 이고, 그 객체가 비어있는 것을 의미한다면, 필터링이 필요합니다.
-        const validPrevViewers = prev.filter(v => v.name && v.id); // 유효한 열람자만 필터링
+        const validPrevViewers = prev.filter(v => v.name && v.id);
         return [...validPrevViewers, newViewer];
     });
-    if (currentStep < 3 && content.trim() !== "" && willTitle.trim() !== "" && testatorName.trim() !== "") {
+    if (currentStep < 3 && content.trim() !== "" && willTitle.trim() !== "" && testatorDisplayRealName.trim() !== "" && testatorDisplayRealName !== "로그인 필요") {
       setCurrentStep(3);
     }
   };
+
   const handleTitleChange = (e) => {
     const value = e.target.value;
     setWillTitle(value);
-    if (value.trim() !== "" && content.trim() !== "" && testatorName.trim() !== "" && currentStep < 2) {
+    // testatorName 대신 testatorDisplayRealName과 sessionUsername 유효성 검사
+    if (value.trim() !== "" && content.trim() !== "" && sessionUsername && currentStep < 2) {
       setCurrentStep(2);
-    } else if (value.trim() !== "" && testatorName.trim() !== "" && currentStep === 1) { // 정확히 1단계일때 기본정보만으로 1단계 유지
+    } else if (value.trim() !== "" && sessionUsername && currentStep === 1) {
       setCurrentStep(1);
     }
   };
 
-  const handleTestatorNameChange = (e) => {
-    const value = e.target.value;
-    setTestatorName(value);
-    if (value.trim() !== "" && content.trim() !== "" && willTitle.trim() !== "" && currentStep < 2) {
-      setCurrentStep(2);
-    } else if (value.trim() !== "" && willTitle.trim() !== "" && currentStep === 1) { // 정확히 1단계일때 기본정보만으로 1단계 유지
-      setCurrentStep(1);
-    }
-  };
+  // testatorName 입력 필드는 이제 화면 표시용 실명을 보여주고, 직접 수정은 불가하게 하거나, 
+  // 수정해도 서버 전송값에는 영향 없도록 처리
+  // const handleTestatorNameChange = (e) => { ... }; // 이 함수는 이제 직접 사용하지 않거나, 다른 용도로 변경
 
-
- 
   const handleSubmit = async () => {
-    if (!willTitle || !content || !testatorName) {
-      setApiStatus({ loading: false, error: "유언장 제목, 내용, 작성자 이름은 필수 항목입니다.", data: null });
+    // testatorName 대신 sessionUsername으로 유효성 검사 및 서버 전송
+    if (!willTitle || !content || !sessionUsername) {
+      setApiStatus({ loading: false, error: "유언장 제목, 내용, 작성자 정보(로그인 상태)는 필수 항목입니다.", data: null });
       return;
     }
-    // 열람자 목록이 비어있을 경우 빈 배열로 처리 (서버에서 null을 허용하지 않을 수 있음)
     const beneficiariesToSend = viewers.length > 0 && viewers[0].name ? viewers.map(v => v.name) : [];
-
-
     setApiStatus({ loading: true, error: null, data: null });
 
     const willData = {
       title: willTitle,
       originalContent: content,
-      beneficiaries: beneficiariesToSend, // 수정된 열람자 목록 사용
-      testatorId: testatorName,
+      beneficiaries: beneficiariesToSend,
+      testatorId: sessionUsername, // 서버에는 세션에서 가져온 username을 전송
     };
 
     try {
-      const response = await fetch('/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(willData),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || result.message || `HTTP error! status: ${response.status}`);
-      }
-
-      setApiStatus({ loading: false, error: null, data: result });
-      // 성공 시, 다음 단계로 이동 (currentStep 업데이트는 선택 사항)
-      // setCurrentStep(4); // 최종 확인 단계로 UI를 업데이트 할 수도 있음
-      console.log("등록 성공:", result);
-      navigate('/success'); // 성공 페이지로 이동
+      // willService.registerWill을 사용하도록 수정 (기존 fetch 대신)
+      const response = await willService.registerWill(willData); 
+      
+      // axios 응답은 response.data에 실제 데이터가 들어있습니다.
+      // 성공/실패 처리는 willService 내부 또는 여기서 HTTP status code 기준으로 할 수 있습니다.
+      // 여기서는 willService.registerWill이 성공 시 데이터를, 실패 시 에러를 throw한다고 가정합니다.
+      setApiStatus({ loading: false, error: null, data: response.data });
+      console.log("등록 성공:", response.data);
+      navigate('/success');
 
     } catch (error) {
-      setApiStatus({ loading: false, error: error.message, data: null });
+      // axios 오류인 경우 error.response.data.error 등으로 서버에서 보낸 오류 메시지 접근 가능
+      const errorMessage = error.response?.data?.error || error.message || "유언장 등록 중 알 수 없는 오류가 발생했습니다.";
+      setApiStatus({ loading: false, error: errorMessage, data: null });
       console.error("등록 실패:", error);
     }
   };
-
 
   return (
     <div className="WillWritePage_Container">
       <h2 className="WillWritePage_Title">디지털 유언장 작성</h2>
       <div className="WillWritePage_Subtitle">작성 진행 상태</div>
+      {/* ... (StepProgress 부분은 동일) ... */}
       <div className="WillWritePage_StepProgress" style={{ "--progress": currentStep - 1 }}>
         <div className={`WillWritePage_StepProgress_StepItem ${currentStep >= 1 ? "active" : ""}`}>
           <div className="WillWritePage_StepProgress_Circle">1</div>
@@ -180,14 +176,22 @@ const WillWritePage = () => {
         </div>
       </div>
 
+
       <div className="WillWritePage_Section">
         <div className="WillWritePage_Label">기본 정보</div>
         <div className="WillWritePage_InlineInputs">
           <input className="WillWritePage_Input" placeholder="유언장 제목" value={willTitle} onChange={handleTitleChange} />
-          <input className="WillWritePage_Input" placeholder="작성자 이름" value={testatorName} onChange={handleTestatorNameChange} />
+          {/* 작성자 이름 필드는 실명을 보여주고, readonly로 설정하거나 값 변경 핸들러를 제거 */}
+          <input 
+            className="WillWritePage_Input" 
+            placeholder="작성자 이름 (자동 입력)" 
+            value={isLoadingRealName ? "실명 로딩 중..." : testatorDisplayRealName} 
+            readOnly // 사용자가 직접 수정하지 못하도록
+          />
         </div>
       </div>
 
+      {/* ... (나머지 유언장 내용, 파일 업로드, 열람자 지정, 고급 설정, 버튼 부분은 이전과 유사하게 유지) ... */}
       <div className="WillWritePage_Section">
         <div className="WillWritePage_Label">유언장 내용</div>
         <textarea
@@ -210,7 +214,7 @@ const WillWritePage = () => {
             id="handwritten-upload"
             type="file"
             accept=".jpg,.jpeg,.png,.webp"
-            multiple // 여러 파일 업로드 가능성은 있지만, OCR은 첫 파일만 처리합니다.
+            multiple
             onChange={handleFileChange}
             className="WillWritePage_UploadInput"
           />
@@ -218,7 +222,6 @@ const WillWritePage = () => {
         <label htmlFor="handwritten-upload" className="WillWritePage_UploadButton">
           📎 문서 업로드하기
         </label>
-        {/* OCR 진행 상태 및 오류 메시지 표시 */}
         {ocrInProgress && <div style={{ marginTop: '10px', textAlign: 'center' }}>OCR 처리 중...</div>}
         {ocrError && <div style={{ color: 'red', marginTop: '10px', textAlign: 'center' }}>OCR 오류: {ocrError}</div>}
         {uploadedFiles.length > 0 && (
@@ -272,7 +275,7 @@ const WillWritePage = () => {
       </div>
       {apiStatus.error && <div style={{ color: 'red', marginTop: '10px', textAlign: 'center' }}>오류: {apiStatus.error}</div>}
       {apiStatus.data && <div style={{ color: 'green', marginTop: '10px', textAlign: 'center' }}>
-        성공! 블록체인 Will ID: {apiStatus.data.blockchainWillId}, DB ID: {apiStatus.data.dbRecordId}
+        성공! 서버 응답: {JSON.stringify(apiStatus.data)}
         </div>}
     </div>
   );

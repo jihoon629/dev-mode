@@ -14,7 +14,7 @@ const loginUser = (credentials) => axios.post('/auth/login', credentials); // { 
 
 const registerUser = (userData) => axios.post('/auth/register', userData); // { username, password }
 
-const queryByName = (username) => axios.get(`/queryByName/${username}`); // 수정된 코드
+    const queryByName = (username) => axios.get(`/queryByName/${username}`); // 수정된 코드
 
 export default {
   registerWill,

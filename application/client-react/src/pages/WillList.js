@@ -13,6 +13,7 @@ export default function WillList({ onSelect }) {
     setStatus('조회 중...');
     try {
       const res = await willService.getMyWills();
+      console.log(res);
       if (Array.isArray(res.data) && res.data.length > 0) {
         setList(res.data);
         setStatus(`${res.data.length}개의 유언장이 조회되었습니다.`);
@@ -56,8 +57,7 @@ export default function WillList({ onSelect }) {
             key={idx}
             className="list-group-item list-group-item-action"
             style={{ cursor: 'pointer' }}
-            // onClick={() => onSelect?.(item.willID || item.Key)} // 기존 onSelect 대신 handleItemClick 사용
-            onClick={() => handleItemClick(item.willID || item.Key)}
+            onClick={() => onSelect?.(item.willID || item.Key)}
           >
             <strong>ID:</strong> {item.willID || item.Key}<br />
             <strong>제목:</strong> {item.title || '제목 없음'}
