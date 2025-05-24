@@ -17,4 +17,4 @@ basic-network/organizations/fabric-ca/org3
 explorer/pgdata
 explorer/wallet
 
-chaincode/abstore/go/vendor
+chaincode/abstore/go/vendorapplication/rest/gcp-credentials.json

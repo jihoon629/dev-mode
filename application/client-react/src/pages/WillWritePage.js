@@ -3,6 +3,8 @@ import React, { useState } from "react";
 import { FaUpload } from "react-icons/fa";
 import './WillWritePageCss/WillWritePage.css'; // CSS 파일 임포트
 import { useNavigate } from 'react-router-dom'; // useNavigate 훅 임포트
+import willService from '../services/willService'; // default export를 가져옴
+
 
 const WillWritePage = () => {
   const navigate = useNavigate(); // useNavigate 훅 사용
@@ -22,10 +24,46 @@ const WillWritePage = () => {
     error: null,
     data: null,
   });
-  const handleFileChange = (e) => {
+  const [ocrInProgress, setOcrInProgress] = useState(false); // OCR 진행 상태 추가
+  const [ocrError, setOcrError] = useState(null); // OCR 오류 상태 추가
+
+  const handleFileChange = async (e) => {
     const files = Array.from(e.target.files);
     setUploadedFiles(files);
+
+    if (files.length > 0) {
+      const fileToProcess = files[0]; // 첫 번째 파일만 처리한다고 가정
+
+      setOcrInProgress(true);
+      setOcrError(null);
+
+      try {
+        // willService를 사용하여 OCR API 호출 - 함수 이름을 extractTextFromImage로 수정
+        const response = await willService.extractTextFromImage(fileToProcess);
+
+        // axios 응답은 response.data에 실제 데이터가 들어있습니다.
+        const result = response.data;
+
+        if (result.text !== undefined) { // text 속성이 있는지 확인 (빈 문자열일 수도 있음)
+          setContent(prevContent => prevContent ? `${prevContent}\n${result.text}` : result.text);
+          if (result.text.trim() !== "" && currentStep < 2 && willTitle.trim() !== "" && testatorName.trim() !== "") {
+            setCurrentStep(2);
+          }
+        } else {
+          // 응답은 성공(2xx)했지만, 예상한 text 필드가 없는 경우
+          throw new Error("OCR API did not return text in the expected format.");
+        }
+      } catch (error) {
+        console.error("OCR 실패:", error);
+        // axios 오류인 경우 error.response.data.error 등으로 서버에서 보낸 오류 메시지 접근 가능
+        const errorMessage = error.response?.data?.error || error.message || "OCR 처리 중 알 수 없는 오류가 발생했습니다.";
+        setOcrError(errorMessage);
+      } finally {
+        setOcrInProgress(false);
+      }
+    }
   };
+
 
   const handleContentChange = (e) => {
     const value = e.target.value;
@@ -159,7 +197,6 @@ const WillWritePage = () => {
           onChange={handleContentChange}
         />
       </div>
-
       <div className="WillWritePage_Section">
         <div className="WillWritePage_Label">자필 문서 스캔 (선택사항)</div>
         <label htmlFor="handwritten-upload" className="WillWritePage_UploadBoxLabel">
@@ -172,8 +209,8 @@ const WillWritePage = () => {
           <input
             id="handwritten-upload"
             type="file"
-            accept=".jpg,.jpeg,.png,.pdf"
-            multiple
+            accept=".jpg,.jpeg,.png,.webp"
+            multiple // 여러 파일 업로드 가능성은 있지만, OCR은 첫 파일만 처리합니다.
             onChange={handleFileChange}
             className="WillWritePage_UploadInput"
           />
@@ -181,6 +218,9 @@ const WillWritePage = () => {
         <label htmlFor="handwritten-upload" className="WillWritePage_UploadButton">
           📎 문서 업로드하기
         </label>
+        {/* OCR 진행 상태 및 오류 메시지 표시 */}
+        {ocrInProgress && <div style={{ marginTop: '10px', textAlign: 'center' }}>OCR 처리 중...</div>}
+        {ocrError && <div style={{ color: 'red', marginTop: '10px', textAlign: 'center' }}>OCR 오류: {ocrError}</div>}
         {uploadedFiles.length > 0 && (
           <ul className="WillWritePage_FileNameList">
             {uploadedFiles.map((file, index) => (
@@ -189,7 +229,6 @@ const WillWritePage = () => {
           </ul>
         )}
       </div>
-
       <div className="WillWritePage_Section">
         <div className="WillWritePage_Label">열람자 지정</div>
         {viewers.map((v, i) => (
