@@ -31,22 +31,30 @@ async function registerWill(req, res, next) {
 // (로그인된 사용자의) 내 유언장 목록 조회 처리
 async function getMyWills(req, res, next) {
     try {
-        // 현재는 로그인 사용자 ID를 어떻게 가져올지 명시되지 않았으므로,
-        // service.getMyWillsService가 이를 내부적으로 처리하거나,
-        // 향후 인증 미들웨어 등을 통해 req.user.id 와 같이 전달받을 수 있습니다.
-        // 여기서는 파라미터 없이 호출하는 것으로 가정합니다.
-        console.log("Controller: Received request for getMyWills.");
-        const myWills = await willService.getMyWillsService();
+        // 클라이언트가 GET 요청 시 쿼리 파라미터로 username을 전달한다고 가정
+        // 예: /api/wills/my-wills?username=testUser
+        const username = req.query.username; 
+console.log(username);
+        if (!username) {
+            // username이 제공되지 않은 경우 에러 응답
+            return res.status(400).json({ message: "Username is required as a query parameter." });
+        }
+
+        console.log(`Controller: Received request for getMyWills for username: ${username}`);
+        // 수정: service 함수 호출 시 username 전달
+        const myWills = await willService.getMyWillsService(username); 
+        
         res.status(200).json(myWills);
     } catch (error) {
-        console.error(`Controller Error in getMyWills: ${error.message}`);
-        next(error);
+        console.error(`Controller Error in getMyWills for username ${req.query.username || '(not provided)'}: ${error.message}`);
+        next(error); // 에러 핸들링 미들웨어로 전달
     }
 }
 
 // 특정 유언장 상세 정보 조회 처리
 async function getWillDetails(req, res, next) {
     const { willId } = req.params; // URL 경로에서 willId (블록체인 ID) 추출
+    const { username } = req.query; // 수정: URL 쿼리 파라미터에서 username 추출 (예: /details/some-will-id?username=user1)
 
     if (!willId) {
         const error = new Error('Will ID (from blockchain) is required in the URL path.');
@@ -54,20 +62,33 @@ async function getWillDetails(req, res, next) {
         return next(error);
     }
 
+    // 수정: username 유효성 검사 추가
+    if (!username) {
+        const error = new Error('Username is required as a query parameter to get will details.');
+        error.status = 400;
+        return next(error);
+    }
+
     try {
-        const willDetails = await willService.getWillDetailsService(willId);
-        if (!willDetails) { // 서비스에서 null이나 undefined를 반환한 경우 (예: 404 처리 후)
-            const error = new Error(`Will with ID ${willId} not found.`);
-            error.status = 404;
-            return next(error);
-        }
+        console.log(`Controller: Received request for getWillDetails. Will ID: ${willId}, Username: ${username}`);
+        // 수정: service 함수 호출 시 username 전달
+        const willDetails = await willService.getWillDetailsService(willId, username);
+        
+        // 서비스에서 에러를 throw하고 여기서 잡지 않는다면, 서비스에서 null을 반환했을 때의 처리는 불필요.
+        // (위 서비스 코드는 에러를 throw하므로, 여기서 willDetails가 falsy한 경우는 정상적으로 발생하지 않음)
+        // if (!willDetails) { 
+        //     const error = new Error(`Will with ID ${willId} not found or access denied for user ${username}.`);
+        //     error.status = 404; // 또는 403
+        //     return next(error);
+        // }
         res.status(200).json(willDetails);
     } catch (error) {
-        // service에서 404 에러를 throw한 경우 여기서 잡히고, status가 유지됨
-        console.error(`Controller Error in getWillDetails for ID ${willId}: ${error.message}`);
+        console.error(`Controller Error in getWillDetails for ID ${willId}, User ${username}: ${error.message}`);
+        // 서비스에서 status가 포함된 에러를 throw하므로, next(error)로 전달하면 express 에러 핸들러가 처리.
         next(error);
     }
 }
+
 
 module.exports = {
     registerWill,

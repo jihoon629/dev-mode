@@ -4,66 +4,74 @@ import { useParams } from 'react-router-dom';
 import willService from '../services/willService';
 
 export default function WillDetails() {
-  const [willData, setWillData] = useState(null);
-  const [displayData, setDisplayData] = useState(null);
+  const [willData, setWillData] = useState(null); 
+  const [displayData, setDisplayData] = useState(null); 
   const [errorMsg, setErrorMsg] = useState('');
   const [loading, setLoading] = useState(false);
-  const { willId } = useParams();
+  const { willId } = useParams(); 
 
   useEffect(() => {
-    if (!willId) return;
+    if (!willId) {
+      setErrorMsg("유언장 ID가 제공되지 않았습니다.");
+      return;
+    }
 
     const fetchDetailsAndRealName = async () => {
       setLoading(true);
       setErrorMsg('');
-      setWillData(null);
-      setDisplayData(null);
+      setWillData(null); 
+      setDisplayData(null); 
+
+      const loggedInUsername = sessionStorage.getItem('username'); // 현재 로그인한 사용자
+
+      if (!loggedInUsername) {
+        setErrorMsg("로그인이 필요합니다. 사용자 정보를 찾을 수 없습니다.");
+        setLoading(false);
+        return;
+      }
 
       try {
-        // 1. 유언장 상세 정보 가져오기
-        const res = await willService.getWillDetails(willId);
-        const rawData = res.data;
-        setWillData(rawData); // 원본 데이터 저장
+        const rawData = await willService.getWillDetails(willId, loggedInUsername); 
+        setWillData(rawData); 
 
-        // 2. 세션 스토리지에서 현재 로그인한 사용자의 username 가져오기
-        const loggedInUsername = sessionStorage.getItem('username');
-        let realName = '알 수 없음'; // 기본값
-
-        if (loggedInUsername) {
-          try {
-            // 3. 세션의 username으로 실명 조회
-            const nameRes = await willService.queryByName(loggedInUsername);
-            realName = nameRes.data.realName || loggedInUsername; // 실명 없으면 세션의 username 표시
-          } catch (nameErr) {
-            console.error(`실명 조회 실패 (username: ${loggedInUsername}):`, nameErr);
-            realName = loggedInUsername; // 실명 조회 실패 시 세션의 username을 그대로 사용
-          }
-        } else {
-          // 세션에 username이 없는 경우 (예: 로그아웃 상태로 상세 페이지 접근 시도 등)
-          // rawData.testatorID (해시된 값)를 표시하거나, '알 수 없음' 등으로 처리
-          // 여기서는 일단 '알 수 없음'으로 처리하고, 필요시 rawData.testatorID를 사용할 수 있습니다.
-          console.warn('세션에서 사용자 이름을 찾을 수 없어 유언자 실명을 조회할 수 없습니다.');
+        let currentUserRealName = loggedInUsername; 
+        try {
+          const nameRes = await willService.queryByName(loggedInUsername); 
+          currentUserRealName = nameRes.data.realName || loggedInUsername; 
+        } catch (nameErr) {
+          console.error(`현재 사용자 실명 조회 실패 (username: ${loggedInUsername}):`, nameErr);
         }
         
-        // 4. 화면에 표시할 데이터 구성
+        // 화면에 표시할 데이터 구성
         setDisplayData({
           title: rawData.title,
-          originalContent: rawData.originalContent,
+          originalContent: rawData.originalContent, 
           creationTimestamp: new Date(rawData.creationTimestamp * 1000).toLocaleString(),
-          testatorRealName: realName, // 세션 username으로 조회한 실명
+          testatorRealName: currentUserRealName, // 현재 로그인 사용자의 실명
+          willID_display: rawData.willID, 
+          // testatorID_from_will 필드 제거
         });
 
       } catch (err) {
-        setErrorMsg('유언장 조회 실패: ' + (err.response?.data?.error || err.message));
+        let message = '유언장 조회 실패';
+        if (err.data && err.data.message) { 
+          message += `: ${err.data.message}`;
+        } else if (err.data && err.data.error) {
+          message += `: ${err.data.error}`;
+        } else if (err.message) {
+          message += `: ${err.message}`;
+        }
+        setErrorMsg(message);
+        console.error("WillDetails fetch error:", err);
       } finally {
         setLoading(false);
       }
     };
 
     fetchDetailsAndRealName();
-  }, [willId]); // willId가 변경될 때마다 실행
+  }, [willId]); 
 
-  if (!willId) return <p>유언장 ID가 선택되지 않았습니다.</p>;
+  if (!willId && !loading && !errorMsg) return <p>유언장 ID가 선택되지 않았습니다.</p>;
 
   return (
     <div className="will-details-container form-group mt-4" style={styles.container}>
@@ -74,13 +82,18 @@ export default function WillDetails() {
       {displayData && (
         <div style={styles.detailsBox}>
           <div style={styles.detailItem}>
+            <strong style={styles.label}>블록체인 Will ID:</strong>
+            <p style={styles.value}>{displayData.willID_display || 'N/A'}</p>
+          </div>
+          <div style={styles.detailItem}>
             <strong style={styles.label}>제목:</strong>
             <p style={styles.value}>{displayData.title || '제목 없음'}</p>
           </div>
           <div style={styles.detailItem}>
-            <strong style={styles.label}>유언자 (실명):</strong>
+            <strong style={styles.label}>유언자:</strong> 
             <p style={styles.value}>{displayData.testatorRealName}</p>
           </div>
+          {/* "유언장에 기록된 작성자 ID" 표시 부분 제거 */}
           <div style={styles.detailItem}>
             <strong style={styles.label}>작성일시:</strong>
             <p style={styles.value}>{displayData.creationTimestamp}</p>
@@ -91,16 +104,6 @@ export default function WillDetails() {
           </div>
         </div>
       )}
-      
-      {/* 원본 데이터 보기 (디버깅용) */}
-      {/* {willData && (
-        <>
-          <h4 style={{marginTop: '30px'}}>원본 데이터 (Raw Data)</h4>
-          <pre className="response-area" style={{ backgroundColor: '#f8f9fa', padding: '10px', border: '1px solid #ccc', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
-            {JSON.stringify(willData, null, 2)}
-          </pre>
-        </>
-      )} */}
     </div>
   );
 }

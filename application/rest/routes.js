@@ -11,7 +11,7 @@ const storage = multer.memoryStorage();
 const upload = multer({ storage: storage }); // 'upload' 변수 정의
 
 router.post('/register', willController.registerWill);
-router.get('/mywills', willController.getMyWills);
+router.get('/wills/my-wills', willController.getMyWills);
 router.get('/details/:willId', willController.getWillDetails);
 
 // OCR 엔드포인트 추가

@@ -36,11 +36,17 @@ func (s *ABstore) InitLedger(ctx contractapi.TransactionContextInterface) error 
 	return nil
 }
 
-// RegisterWill creates a new digital will on the ledger.
-func (s *ABstore) RegisterWill(ctx contractapi.TransactionContextInterface, title string, contentHash string, offChainStorageRef string, beneficiariesJSON string) (string, error) { // 리시버 변경
-	fmt.Printf("ABstore.RegisterWill: Attempting to register will with Title='%s', ContentHash (first 10)='%s...', OffChainRef='%s'\n", // 로그 메시지 변경
-		title, firstN(contentHash, 10), offChainStorageRef)
+/// ... (기존 import 및 다른 함수들은 동일)
 
+// RegisterWill creates a new digital will on the ledger.
+// TestatorID를 명시적인 파라미터 (제출자 username)로 받도록 수정
+func (s *ABstore) RegisterWill(ctx contractapi.TransactionContextInterface, usernameAsTestatorID string, title string, contentHash string, offChainStorageRef string, beneficiariesJSON string) (string, error) {
+	fmt.Printf("ABstore.RegisterWill: Attempting to register will with TestatorID='%s', Title='%s', ContentHash (first 10)='%s...', OffChainRef='%s'\n",
+		usernameAsTestatorID, title, firstN(contentHash, 10), offChainStorageRef)
+
+	if usernameAsTestatorID == "" {
+		return "", fmt.Errorf("usernameAsTestatorID (for TestatorID) cannot be empty")
+	}
 	if title == "" {
 		return "", fmt.Errorf("title cannot be empty")
 	}
@@ -48,14 +54,11 @@ func (s *ABstore) RegisterWill(ctx contractapi.TransactionContextInterface, titl
 		return "", fmt.Errorf("contentHash cannot be empty; it's crucial for verifying off-chain content")
 	}
 
-	testatorID, err := getSubmitterID(ctx)
-	if err != nil {
-		return "", fmt.Errorf("failed to get submitter ID: %w", err)
-	}
+
 
 	beneficiaries := make([]string, 0)
 	if beneficiariesJSON != "" {
-		err = json.Unmarshal([]byte(beneficiariesJSON), &beneficiaries)
+		err := json.Unmarshal([]byte(beneficiariesJSON), &beneficiaries)
 		if err != nil {
 			return "", fmt.Errorf("failed to unmarshal beneficiaries JSON string '%s': %w", beneficiariesJSON, err)
 		}
@@ -67,7 +70,7 @@ func (s *ABstore) RegisterWill(ctx contractapi.TransactionContextInterface, titl
 	will := Will{
 		ObjectType:         "will",
 		WillID:             willID,
-		TestatorID:         testatorID,
+		TestatorID:         usernameAsTestatorID, // 파라미터로 받은 username을 TestatorID로 사용
 		Title:              title,
 		ContentHash:        contentHash,
 		OffChainStorageRef: offChainStorageRef,
@@ -87,12 +90,13 @@ func (s *ABstore) RegisterWill(ctx contractapi.TransactionContextInterface, titl
 		return "", fmt.Errorf("failed to put will %s to world state: %w", willID, err)
 	}
 
-	fmt.Printf("ABstore.RegisterWill: Successfully registered will ID '%s' for testator '%s'\n", willID, testatorID) // 로그 메시지 변경
+	fmt.Printf("ABstore.RegisterWill: Successfully registered will ID '%s' for testator '%s'\n", willID, usernameAsTestatorID)
 	return willID, nil
 }
 
+
 // GetWillDetails retrieves a specific will by its ID from the ledger.
-func (s *ABstore) GetWillDetails(ctx contractapi.TransactionContextInterface, willID string) (*Will, error) { // 리시버 변경
+func (s *ABstore) GetWillDetails(ctx contractapi.TransactionContextInterface, willID string, username string) (*Will, error) {
 	fmt.Printf("ABstore.GetWillDetails: Attempting to retrieve will with ID '%s'\n", willID) // 로그 메시지 변경
 
 	if willID == "" {
@@ -113,13 +117,9 @@ func (s *ABstore) GetWillDetails(ctx contractapi.TransactionContextInterface, wi
 		return nil, fmt.Errorf("failed to unmarshal JSON for will '%s': %w", willID, err)
 	}
 
-	callerID, err := getSubmitterID(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get submitter ID for access control check: %w", err)
-	}
 
-	if will.TestatorID != callerID {
-		return nil, fmt.Errorf("access denied: caller '%s' is not the testator of will '%s'. Only the testator can view details.", firstN(callerID, 20), willID)
+	if will.TestatorID != username { // 파라미터로 받은 username과 비교
+		return nil, fmt.Errorf("access denied: user '%s' is not the testator ('%s') of will '%s'.", username, will.TestatorID, willID)
 	}
 
 	fmt.Printf("ABstore.GetWillDetails: Successfully retrieved will ID '%s' for testator '%s'\n", willID, will.TestatorID) // 로그 메시지 변경
@@ -127,15 +127,20 @@ func (s *ABstore) GetWillDetails(ctx contractapi.TransactionContextInterface, wi
 }
 
 // GetMyWills retrieves all wills created by the calling user (testator).
-func (s *ABstore) GetMyWills(ctx contractapi.TransactionContextInterface) ([]*Will, error) { // 리시버 변경
-	fmt.Println("ABstore.GetMyWills: Retrieving all wills for the current submitter") // 로그 메시지 변경
+func (s *ABstore) GetMyWills(ctx contractapi.TransactionContextInterface, usernameAsTestatorID string) ([]*Will, error) {
+	fmt.Printf("ABstore.GetMyWills: Retrieving all wills for testator (username) '%s'\n", usernameAsTestatorID)
 
-	testatorID, err := getSubmitterID(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get submitter ID: %w", err)
+	if usernameAsTestatorID == "" {
+		return nil, fmt.Errorf("usernameAsTestatorID (for TestatorID) cannot be empty")
 	}
 
-	resultsIterator, err := ctx.GetStub().GetStateByRange("", "")
+	// 기존의 getSubmitterID 호출은 주석 처리 또는 제거
+	// testatorID, err := getSubmitterID(ctx)
+	// if err != nil {
+	// 	return nil, fmt.Errorf("failed to get submitter ID: %w", err)
+	// }
+
+	resultsIterator, err := ctx.GetStub().GetStateByRange("", "") // 모든 Will 객체를 가져오기 위해 범위는 그대로 둠
 	if err != nil {
 		return nil, fmt.Errorf("failed to get state by range: %w", err)
 	}
@@ -151,21 +156,23 @@ func (s *ABstore) GetMyWills(ctx contractapi.TransactionContextInterface) ([]*Wi
 		var will Will
 		if errUnmarshal := json.Unmarshal(queryResponse.Value, &will); errUnmarshal != nil {
 			// fmt.Printf("Skipping asset %s, not a valid Will object: %s\n", queryResponse.Key, errUnmarshal.Error())
-			continue
+			continue // 유효하지 않은 Will 객체는 건너뜀
 		}
 
-		if will.ObjectType == "will" && will.TestatorID == testatorID {
+		// 필터링 조건: ObjectType이 "will"이고, will의 TestatorID가 파라미터로 받은 usernameAsTestatorID와 일치하는 경우
+		if will.ObjectType == "will" && will.TestatorID == usernameAsTestatorID {
 			myWills = append(myWills, &will)
 		}
 	}
 
 	if len(myWills) == 0 {
-		fmt.Printf("ABstore.GetMyWills: No wills found for testator '%s'\n", firstN(testatorID, 20)) // 로그 메시지 변경
+		fmt.Printf("ABstore.GetMyWills: No wills found for testator (username) '%s'\n", usernameAsTestatorID)
 	} else {
-		fmt.Printf("ABstore.GetMyWills: Found %d wills for testator '%s'\n", len(myWills), firstN(testatorID,20)) // 로그 메시지 변경
+		fmt.Printf("ABstore.GetMyWills: Found %d wills for testator (username) '%s'\n", len(myWills), usernameAsTestatorID)
 	}
 	return myWills, nil
 }
+
 
 // getSubmitterID retrieves the unique ID of the client submitting the transaction.
 func getSubmitterID(ctx contractapi.TransactionContextInterface) (string, error) {
