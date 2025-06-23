@@ -5,7 +5,7 @@
 <h1>실행법</h1> <br>
 1.단 nvm use 16 확인 <br>
 2.제 ./network.sh clean 먼저 실행 후 
-3. 이하 그대로 실행
+3. 이하 그대로 실행 <br>
 ./network.sh dev <br>
 ./network.sh dev installCC abstore <br>
 ./network.sh startSDK <br>
