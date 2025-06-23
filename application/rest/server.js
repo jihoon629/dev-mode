@@ -14,7 +14,7 @@ app.get('/init', function (req, res) {
     let b = req.query.b;
     let bval = req.query.bval;
     let args = [a, aval, b, bval];
-    sdk.send(false, 'Init', args, res);
+    sdk.send(false, 'init', args, res);
  });
 
 app.get('/invoke', function (req, res) {
@@ -22,19 +22,19 @@ app.get('/invoke', function (req, res) {
     let b = req.query.b;
     let value = req.query.value;
     let args = [a, b, value];
-    sdk.send(false, 'Invoke', args, res);
+    sdk.send(false, 'invoke', args, res);
 });
 
 app.get('/query', function (req, res) {
     let name = req.query.name;
     let args = [name];
-    sdk.send(true, 'Query', args, res);
+    sdk.send(true, 'query', args, res);
  });
 
  app.get('/delete', function (req, res) {
     let name = req.query.name;
     let args = [name];
-    sdk.send(false, 'Delete', args, res);
+    sdk.send(false, 'delete', args, res);
 });
 
 app.get('/queryAll', function (req, res) {
