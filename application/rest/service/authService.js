@@ -1,92 +1,180 @@
 // application/rest/service/authService.js
-const User = require('../models/userModel');
 const jwt = require('jsonwebtoken');
-const { jwt: jwtConfig } = require('../config'); // config/index.js 에서 jwt 설정 가져오기
+const userModel = require('../models/userModel');
+const { ensureFabricIdentity } = require('../utils/fabricWallet/fabric'); // 새로 추가!
+const jwtConfig = require('../config/jwtConfig');
 
-const AuthService = {
-  // 회원가입 로직
-  async register(username, email, password) {
-    // 입력값 유효성 검사 (간단한 예시, 실제로는 더 견고하게)
-    if (!username || !email || !password) {
-      throw new Error('사용자 이름, 이메일, 비밀번호는 모두 필수입니다.');
-    }
-    if (password.length < 6) {
-        throw new Error('비밀번호는 6자 이상이어야 합니다.');
-    }
-    // 이메일 형식 검사 등 추가 가능
+class AuthService {
+    async register(username, email, password ) {
+        try {
+            const newUser = await userModel.create(
+                username,
+                email,
+                password
+            );
 
-    try {
-      // 사용자 중복 체크 (username 또는 email)
-      const existingUser = await User.findByUsernameOrEmail(username) || await User.findByUsernameOrEmail(email);
-      if (existingUser) {
-        if (existingUser.username === username) {
-            throw new Error('이미 사용 중인 사용자 이름입니다.');
+            if (!newUser || !newUser.id) {
+                throw new Error('User creation in database failed.');
+            }
+            console.log('User created in MariaDB:', newUser);
+
+            // Fabric 네트워크에 사용자 ID 등록/확인 로직 변경
+            const fabricUserId = newUser.email;
+            const fabricIdentityResult = await ensureFabricIdentity(fabricUserId); // fabric.js 함수 호출
+
+            if (!fabricIdentityResult.success) {
+                // ensureFabricIdentity가 이미 상세 오류를 로깅하므로, 여기서는 종합적인 메시지
+                console.error(`Fabric identity processing failed for ${fabricUserId} after DB user creation: ${fabricIdentityResult.message}`);
+                throw new Error(`User registered in DB, but Fabric identity processing failed: ${fabricIdentityResult.message}`);
+            }
+            // fabricIdentityResult.message는 "이미 존재" 또는 "성공적으로 생성/등록" 메시지를 포함
+            console.log(`Fabric identity for user ${fabricUserId} processed: ${fabricIdentityResult.message}`);
+
+
+            const tokenPayload = {
+                id: newUser.id,
+                email: newUser.email,
+                username: newUser.username,
+            };
+            const token = jwt.sign(tokenPayload, jwtConfig.secret, { expiresIn: jwtConfig.expiresIn });
+
+            return {
+                message: 'User registered successfully. Fabric ID also processed.', // 메시지 약간 수정
+                id: newUser.id,
+                username: newUser.username,
+                email: newUser.email,
+            };
+
+        } catch (error) {
+            console.error('Error in AuthService register:', error);
+            if (error.message && error.message.includes('ER_DUP_ENTRY')) {
+                 throw new Error('User with this email already exists.');
+            }
+            throw error;
         }
-        if (existingUser.email === email) {
-            throw new Error('이미 사용 중인 이메일입니다.');
+    }
+  
+    async login(email, password) {
+        try {
+            const user = await userModel.findByEmail(email);
+            if (!user) {
+                const error = new Error('User not found.');
+                throw error;
+            }
+
+            if (user.provider === 'google' && !user.password) {
+                const error = new Error('Please log in with your Google account.');
+                throw error;
+            }
+
+            const isMatch = await userModel.comparePassword(password, user.password);
+            if (!isMatch) {
+                const error = new Error('Invalid credentials.');
+                throw error;
+            }
+
+            // --- 로그인 성공 후 Fabric ID 확인 및 생성 로직 추가 ---
+            const fabricUserId = user.email; // DB에서 조회한 사용자의 이메일 사용
+            console.log(`[AuthService.login] User ${fabricUserId} logged in. Checking/Ensuring Fabric identity.`);
+            const fabricProcessingResult = await ensureFabricIdentity(fabricUserId); // fabric.js 함수 호출
+
+            let fabricMessageForResponse = fabricProcessingResult.message;
+
+            if (!fabricProcessingResult.success) {
+                // Fabric ID 처리 실패 시 오류 로깅.
+                // 로그인은 성공했으므로, 로그인 자체를 실패 처리할 필요는 없을 수 있음.
+                // 관리자 알림 등의 후속 조치 고려 가능.
+                console.error(`[AuthService.login] Fabric identity processing failed for user ${fabricUserId} after successful login: ${fabricProcessingResult.message}`);
+                // fabricMessageForResponse는 이미 오류 메시지를 담고 있음.
+            } else {
+                console.log(`[AuthService.login] Fabric identity for user ${fabricUserId} processed successfully during login: ${fabricProcessingResult.message}`);
+            }
+            // --- Fabric ID 처리 로직 끝 ---
+
+            const tokenPayload = {
+                id: user.id,
+                email: user.email,
+                username: user.username,
+            };
+            const token = jwt.sign(tokenPayload, jwtConfig.secret, { expiresIn: jwtConfig.expiresIn });
+
+            return {
+                message: 'Login successful.',
+                id: user.id,
+                username: user.username,
+                email: user.email,
+                token,
+                fabricMessage: fabricMessageForResponse // Fabric ID 처리 결과 메시지 추가 (선택적)
+            };
+        } catch (error) {
+            console.error('Error in AuthService login:', error);
+            throw error;
         }
-      }
-
-      // 사용자 생성
-      const newUser = await User.create(username, email, password);
-      // 회원가입 성공 시 반환할 사용자 정보 (비밀번호 제외)
-      return {
-        id: newUser.id,
-        username: newUser.username,
-        email: newUser.email
-      };
-    } catch (error) {
-      // userModel.create 에서 던진 SQL 오류 등을 여기서 처리하거나 다시 던짐
-      // 예를 들어, SQL UNIQUE 제약 조건 위반 오류 코드(ER_DUP_ENTRY) 등을 확인하여 구체적인 메시지 반환 가능
-      if (error.code === 'ER_DUP_ENTRY') { // MySQL/MariaDB의 중복 에러 코드
-        // 실제로는 error.message 등을 분석하여 username인지 email인지 구분 필요
-        throw new Error('이미 사용 중인 사용자 이름 또는 이메일입니다. (DB)');
-      }
-      console.error('Error in AuthService.register:', error.message);
-      throw error; // 컨트롤러에서 처리하도록 다시 던짐
-    }
-  },
-
-  // 로그인 로직
-  async login(usernameOrEmail, password) {
-    if (!usernameOrEmail || !password) {
-      throw new Error('사용자 이름(또는 이메일)과 비밀번호는 모두 필수입니다.');
     }
 
-    try {
-      const user = await User.findByUsernameOrEmail(usernameOrEmail);
-      if (!user) {
-        throw new Error('사용자를 찾을 수 없습니다.');
-      }
+    async findOrCreateGoogleUser(profile) {
+        // googleId, email, displayName (username으로 사용)
+        const googleUserData = this.getGoogleUser(profile); // username 포함 가능
 
-      // 데이터베이스에서 가져온 해시된 비밀번호와 입력된 비밀번호 비교
-      const isMatch = await User.comparePassword(password, user.password);
-      if (!isMatch) {
-        throw new Error('비밀번호가 일치하지 않습니다.');
-      }
+        try {
+            // userModel의 findOrCreateByGoogle은 { googleId, email, username } 객체를 받음
+            const user = await userModel.findOrCreateByGoogle({
+                googleId: googleUserData.googleId,
+                email: googleUserData.email,
+                username: googleUserData.name // 또는 별도의 username 생성 로직
+            });
 
-      // 로그인 성공: JWT 생성
-      const payload = {
-        id: user.id,
-        username: user.username
-        // 필요에 따라 다른 정보 추가 가능 (예: 역할 role)
-      };
+            if (!user || !user.id) {
+                throw new Error('Google user creation/retrieval in database failed.');
+            }
+            console.log('Google user processed in MariaDB:', user);
 
-      const token = jwt.sign(payload, jwtConfig.secret, { expiresIn: jwtConfig.expiresIn });
+            // Fabric ID 처리 로직 변경
+            const fabricUserId = user.email;
+            const fabricProcessingResult = await ensureFabricIdentity(fabricUserId); // fabric.js 함수 호출
+            let fabricIdentityMessage = fabricProcessingResult.message; // ensureFabricIdentity의 메시지 사용
 
-      return {
-        token,
-        user: { // 클라이언트에게 반환할 사용자 정보 (비밀번호 등 민감 정보 제외)
-          id: user.id,
-          username: user.username,
-          email: user.email
+            if (!fabricProcessingResult.success) {
+                // ensureFabricIdentity 내부에서 이미 오류 로깅됨
+                console.error(`Fabric identity processing failed for Google user ${fabricUserId}: ${fabricProcessingResult.message}`);
+            }
+             console.log(`Fabric identity for Google user ${fabricUserId} processed: ${fabricProcessingResult.message}`);
+
+
+            const tokenPayload = {
+                id: user.id,
+                email: user.email,
+                username: user.username,
+                provider: 'google',
+            };
+            const token = jwt.sign(tokenPayload, jwtConfig.secret, { expiresIn: jwtConfig.expiresIn });
+
+            return {
+                message: 'Google login/registration successful.',
+                id: user.id,
+                username: user.username,
+                email: user.email,
+                token,
+                fabricMessage: fabricIdentityMessage, // 처리 결과 메시지 전달
+            };
+
+        } catch (error) {
+            console.error('Error in AuthService findOrCreateGoogleUser:', error);
+            throw error;
         }
-      };
-    } catch (error) {
-      console.error('Error in AuthService.login:', error.message);
-      throw error;
     }
-  }
-};
 
-module.exports = AuthService;
+     getGoogleUser(profile) {
+        if (!profile || !profile.emails || !profile.emails.length) {
+            throw new Error('Invalid Google profile data.');
+        }
+        return {
+            googleId: profile.id,
+            email: profile.emails[0].value,
+            name: profile.displayName, // username으로 사용될 수 있음
+            firstName: profile.name && profile.name.givenName ? profile.name.givenName : '',
+            lastName: profile.name && profile.name.familyName ? profile.name.familyName : '',
+        };
+    }
+}
+module.exports = new AuthService();
