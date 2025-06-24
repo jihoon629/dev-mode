@@ -1,15 +1,21 @@
 // application/rest/server.js
 const express = require('express');
+const morgan = require('morgan'); // morgan 임포트
 const path = require('path');
 const cors = require('cors');
-
+const logger = require('./config/logger'); // Winston 로거 임포트
 const { port, dbPool } = require('./config'); // 기본 설정 (포트, DB 풀)
 const passport = require('./config/passportConfig'); // Passport 설정
 const sdk = require('./sdk'); // Fabric SDK 유틸리티
 const mainRoutes = require('./routes'); // API 라우트
 
 const app = express();
-
+if (process.env.NODE_ENV !== 'production') {
+  app.use(morgan('dev')); // 개발 환경에서는 'dev' 포맷 사용
+} else {
+  app.use(morgan('combined', { stream: logger.stream }));
+  // 또는 파일로 로그를 남기려면 추가 설정이 필요 (winston과 연동 가능)
+}
 // --- 1. 기본 미들웨어 설정 ---
 app.use(express.json()); // JSON 요청 본문 파싱
 app.use(express.urlencoded({ extended: true })); // URL 인코딩된 요청 본문 파싱
@@ -51,19 +57,22 @@ app.use((req, res, next) => {
   next(); // 그 외의 경우 다음 미들웨어로
 });
 
+
 // --- 7. 중앙 에러 처리 미들웨어 ---
 // 모든 라우트 및 미들웨어 가장 마지막에 위치
 app.use((err, req, res, next) => {
-  console.error('--- 중앙 에러 처리 ---');
-  console.error('에러 스택:', err.stack); // 개발 중에는 스택 트레이스 확인이 유용
-  const statusCode = err.statusCode || 500;
-  const message = err.message || '서버 내부 오류가 발생했습니다.';
-  if (!res.headersSent) {
-     res.status(statusCode).json({ status: 'error', statusCode, message });
-  } else {
-     // 이미 응답 헤더가 전송된 경우, Express의 기본 에러 핸들러에 위임
-     next(err);
-  }
+  logger.error(`${err.statusCode || 500} - ${err.message} - ${req.originalUrl} - ${req.method} - ${req.ip}`, {
+    stack: err.stack,
+    requestBody: req.body, // 민감 정보는 제외하거나 마스킹 필요
+    requestQuery: req.query,
+  });
+
+  res.status(err.statusCode || 500).json({
+    status: 'error',
+    statusCode: err.statusCode || 500,
+    message: err.message || 'Internal Server Error',
+    // stack: process.env.NODE_ENV === 'development' ? err.stack : undefined, // 개발 시에만 스택 정보 노출
+  });
 });
 
 // --- 애플리케이션 초기화 및 서버 시작 함수 ---

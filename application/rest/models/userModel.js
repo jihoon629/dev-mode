@@ -1,52 +1,57 @@
 // application/rest/models/userModel.js
 const { dbPool } = require('../config');
 const bcrypt = require('bcryptjs');
+const logger = require('../config/logger'); // 로거 추가 (권장)
 
 const User = {
-  async create(username, email, password) {
+  async create(username, email, password, role) { // role 인자 추가
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
-    const sql = 'INSERT INTO users (username, email, password) VALUES (?, ?, ?)';
+    // role 컬럼 추가
+    const sql = 'INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, ?)';
     try {
-      const [result] = await dbPool.query(sql, [username, email, hashedPassword]);
-      return { id: result.insertId, username, email };
+      // role 값 추가
+      const [result] = await dbPool.query(sql, [username, email, hashedPassword, role]);
+      logger.info(`[모델-사용자생성] 사용자 생성 완료. ID: ${result.insertId}, 역할: ${role}`);
+      return { id: result.insertId, username, email, role }; // role 반환
     } catch (error) {
-      console.error('Error creating user:', error);
-      throw error; // 이메일 중복 시 ER_DUP_ENTRY 발생 가능
-    }
-  },
-
-  // username으로 사용자 찾기 (여러 명일 수 있으나, 보통 첫 번째 또는 특정 조건으로 찾음)
-  // Google 로그인 시 username 생성에 사용될 수 있으므로 유지
-  async findByUsername(username) {
-    const sql = 'SELECT * FROM users WHERE username = ? LIMIT 1'; // 중복 가능하므로 LIMIT 1 추가 (선택적)
-    try {
-      const [rows] = await dbPool.query(sql, [username]);
-      return rows.length > 0 ? rows[0] : null;
-    } catch (error) {
-      console.error('Error finding user by username:', error);
+      logger.error(`[모델-사용자생성] 오류: ${error.message}`, { username, email, role, stack: error.stack });
       throw error;
     }
   },
 
-  async findByEmail(email) { // 이메일은 UNIQUE해야 함
-    const sql = 'SELECT * FROM users WHERE email = ?';
+  async findByUsername(username) {
+    // role 컬럼 선택 추가
+    const sql = 'SELECT id, username, email, password, role, created_at, google_id FROM users WHERE username = ? LIMIT 1';
+    try {
+      const [rows] = await dbPool.query(sql, [username]);
+      return rows.length > 0 ? rows[0] : null;
+    } catch (error) {
+      logger.error(`[모델-FindByUsername] 오류: ${error.message}`, { username, stack: error.stack });
+      throw error;
+    }
+  },
+
+  async findByEmail(email) {
+    // role 컬럼 선택 추가
+    const sql = 'SELECT id, username, email, password, role, created_at, google_id FROM users WHERE email = ?';
     try {
       const [rows] = await dbPool.query(sql, [email]);
       return rows.length > 0 ? rows[0] : null;
     } catch (error) {
-      console.error('Error finding user by email:', error);
+      logger.error(`[모델-FindByEmail] 오류: ${error.message}`, { email, stack: error.stack });
       throw error;
     }
   },
 
   async findById(id) {
-    const sql = 'SELECT id, username, email, created_at, google_id FROM users WHERE id = ?';
+    // role 컬럼 선택 추가
+    const sql = 'SELECT id, username, email, role, created_at, google_id FROM users WHERE id = ?';
     try {
       const [rows] = await dbPool.query(sql, [id]);
       return rows.length > 0 ? rows[0] : null;
     } catch (error) {
-      console.error('Error finding user by id:', error);
+      logger.error(`[모델-FindById] 오류: ${error.message}`, { id, stack: error.stack });
       throw error;
     }
   },
@@ -57,13 +62,13 @@ const User = {
   },
 
   async findByGoogleId(googleId) {
-    const sql = 'SELECT * FROM users WHERE google_id = ?';
+    // role 컬럼 선택 추가
+    const sql = 'SELECT id, username, email, password, role, created_at, google_id FROM users WHERE google_id = ?';
     try {
       const [rows] = await dbPool.query(sql, [googleId]);
       return rows.length > 0 ? rows[0] : null;
-    } catch (error)
- {
-      console.error('Error finding user by googleId:', error);
+    } catch (error) {
+      logger.error(`[모델-FindByGoogleId] 오류: ${error.message}`, { googleId, stack: error.stack });
       throw error;
     }
   },
@@ -71,59 +76,55 @@ const User = {
   async findOrCreateByGoogle({ googleId, email, username }) {
     let user = await this.findByGoogleId(googleId);
     if (user) {
-      return user;
+      logger.info(`[모델-Google사용자] 기존 Google ID 사용자 찾음. Email: ${user.email}, 역할: ${user.role}`);
+      return user; // user 객체에 이미 role이 포함되어 있음
     }
 
-    user = await this.findByEmail(email); // 이메일로 기존 사용자 확인 (이메일은 UNIQUE)
+    user = await this.findByEmail(email);
     if (user) {
       if (!user.google_id) {
         const updateGoogleIdSql = 'UPDATE users SET google_id = ? WHERE id = ?';
         await dbPool.query(updateGoogleIdSql, [googleId, user.id]);
-        user.google_id = googleId;
-        console.log(`기존 사용자 ${email} (ID: ${user.id})에게 Google ID ${googleId}를 연결했습니다.`);
+        user.google_id = googleId; // 기존 user 객체에 google_id 업데이트
+        logger.info(`[모델-Google사용자] 기존 사용자 ${email} (ID: ${user.id}, 역할: ${user.role})에게 Google ID ${googleId}를 연결했습니다.`);
       } else if (user.google_id !== googleId) {
-        console.error(`Error: Email ${email} is already associated with a different Google ID.`);
+        logger.error(`[모델-Google사용자] 이메일 ${email}은(는) 이미 다른 Google ID(${user.google_id})와 연결되어 있습니다. 요청된 Google ID: ${googleId}`);
         throw new Error(`이메일 ${email}은(는) 이미 다른 Google 계정과 연결되어 있습니다.`);
       }
-      return user;
+      return user; // user 객체에 이미 role이 포함되어 있음
     }
 
-    // 새로운 Google 사용자를 위한 username 생성 로직
-    // username이 중복될 수 있으므로, 생성 시 _숫자를 붙여 고유하게 만들려는 시도는 유지하는 것이 좋음
     let finalUsername = username;
     if (!finalUsername || finalUsername.trim() === "") {
         finalUsername = email.split('@')[0];
     }
     const baseUsername = finalUsername;
     let counter = 1;
-    // DB에서 username UNIQUE 제약이 없어도, 시스템적으로는 덜 헷갈리게 하려면 중복 방지 시도 가능
-    // 하지만 username이 이제 고유하지 않아도 된다면, 이 while 루프가 꼭 필요할지는 고민 필요.
-    // 여기서는 일단 기존 로직(같은 username으로 Google 가입 시 _숫자 붙이기) 유지
-    let tempUser = await this.findByUsername(finalUsername);
-    while (tempUser && tempUser.google_id !== googleId) { // 다른 사람의 username과 겹치는지 확인
+    let tempUser = await this.findByUsername(finalUsername); // findByUsername은 role 포함하여 반환
+    while (tempUser && tempUser.google_id !== googleId) {
       finalUsername = `${baseUsername}_${counter++}`;
       tempUser = await this.findByUsername(finalUsername);
     }
 
+    // 새로운 Google 사용자를 위한 기본 역할 설정 (예: 'worker')
+    const defaultRoleForNewGoogleUser = 'worker';
+    logger.info(`[모델-Google사용자] 신규 Google 사용자 생성 시도. Email: ${email}, Username: ${finalUsername}, 기본 역할: ${defaultRoleForNewGoogleUser}`);
 
-    const insertSql = 'INSERT INTO users (username, email, google_id, password) VALUES (?, ?, ?, NULL)';
+    // role 컬럼 추가하여 INSERT
+    const insertSql = 'INSERT INTO users (username, email, google_id, password, role) VALUES (?, ?, ?, NULL, ?)';
     try {
-      const [result] = await dbPool.query(insertSql, [finalUsername, email, googleId]);
-      return { id: result.insertId, username: finalUsername, email, google_id: googleId };
+      // role 값 (defaultRoleForNewGoogleUser) 추가
+      const [result] = await dbPool.query(insertSql, [finalUsername, email, googleId, defaultRoleForNewGoogleUser]);
+      logger.info(`[모델-Google사용자] 신규 Google 사용자 생성 완료. ID: ${result.insertId}, 역할: ${defaultRoleForNewGoogleUser}`);
+      return { id: result.insertId, username: finalUsername, email, google_id: googleId, role: defaultRoleForNewGoogleUser }; // role 반환
     } catch (error) {
-      console.error('Error creating user via Google:', error);
-      // ER_DUP_ENTRY는 이제 이메일 중복 시에만 발생해야 함 (username UNIQUE 제약 제거)
+      logger.error(`[모델-Google사용자] 생성 오류: ${error.message}`, { finalUsername, email, googleId, role: defaultRoleForNewGoogleUser, stack: error.stack });
       if (error.code === 'ER_DUP_ENTRY') {
-        throw new Error('이미 사용 중인 이메일입니다. (DB)');
+        throw new Error('이미 사용 중인 이메일입니다.');
       }
       throw error;
     }
-
-    
   }
-
-
-  
 };
 
 module.exports = User;

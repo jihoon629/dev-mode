@@ -1,8 +1,9 @@
 // application/rest/utils/fabricWallet/fabric.js
 const { Wallets } = require('fabric-network');
 const path = require('path');
+const logger = require('../../config/logger');
 const { registerAndEnrollUser } = require('../../../sdk/registUser');
-const defaultWalletPath = path.resolve(__dirname, '..', '..', '..', 'wallet'); // application/wallet
+const defaultWalletPath = path.resolve(__dirname, '..', '..', '..', 'wallet');
 
 /**
  * 지정된 사용자의 Fabric ID가 지갑에 있는지 확인하고, 없으면 생성합니다.
@@ -11,31 +12,28 @@ const defaultWalletPath = path.resolve(__dirname, '..', '..', '..', 'wallet'); /
  */
 async function ensureFabricIdentity(userId) {
   try {
-    console.log(`[fabric.js] Ensuring Fabric identity for user: ${userId} in wallet: ${defaultWalletPath}`);
+    logger.info(`[Fabric헬퍼] 사용자 [${userId}]의 Fabric ID 확인 시작. 지갑 경로: ${defaultWalletPath}`);
     const wallet = await Wallets.newFileSystemWallet(defaultWalletPath);
     const identityExists = await wallet.get(userId);
 
     if (identityExists) {
-      const message = `Fabric identity for user ${userId} already exists.`;
-      console.log(`[fabric.js] ${message}`);
+      const message = `사용자 [${userId}]의 Fabric ID가 이미 지갑에 존재합니다.`;
+      logger.info(`[Fabric헬퍼] ${message}`);
       return { success: true, message: message };
     } else {
-      console.log(`[fabric.js] Fabric identity for user ${userId} not found. Attempting to create using registerAndEnrollUser.`);
-      // registerAndEnrollUser는 { success, message } 객체를 반환합니다.
-      // 이 함수는 내부적으로 process.cwd()를 사용하여 지갑 경로를 결정하므로,
-      // Node 프로세스 실행 위치에 따라 경로가 올바르게 application/wallet으로 해석되어야 합니다.
+      logger.info(`[Fabric헬퍼] 사용자 [${userId}]의 Fabric ID를 찾을 수 없습니다. 신규 생성을 시도합니다.`);
       const creationResult = await registerAndEnrollUser(userId);
       
       if (creationResult.success) {
-        console.log(`[fabric.js] Successfully created Fabric identity for ${userId} via registerAndEnrollUser.`);
+        logger.info(`[Fabric헬퍼] 사용자 [${userId}]의 Fabric ID를 성공적으로 생성했습니다.`);
       } else {
-        console.error(`[fabric.js] Failed to create Fabric identity for ${userId} via registerAndEnrollUser: ${creationResult.message}`);
+        logger.error(`[Fabric헬퍼] 사용자 [${userId}]의 Fabric ID 생성 실패. 원인: ${creationResult.message}`);
       }
-      return creationResult; // { success: boolean, message: string }
+      return creationResult;
     }
   } catch (error) {
-    const errorMessage = `Error in ensureFabricIdentity for ${userId}: ${error.message}`;
-    console.error(`[fabric.js] ${errorMessage}`, error);
+    const errorMessage = `사용자 [${userId}]의 Fabric ID 처리 중 오류 발생: ${error.message}`;
+    logger.error(`[Fabric헬퍼] ${errorMessage}`, { userId, error: error.stack }); // 스택 정보 포함
     return { success: false, message: errorMessage };
   }
 }

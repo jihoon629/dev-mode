@@ -2,29 +2,28 @@
 const AuthService = require('../service/authService');
 const jwt = require('jsonwebtoken');
 const jwtConfig = require('../config/jwtConfig');
+
 const { validateRegistration, validateLogin } = require('../utils/validation/authValidation'); // 유효성 검사 함수 임포트
 
 const { RegisterUserRequestDto, LoginUserRequestDto } = require('../dto/request/authRequstDto');
-const {
-  UserResponseDto,
-  RegistrationSuccessResponseDto,
-  LoginSuccessResponseDto
-} = require('../dto/response/authResponseDto');
+const { UserResponseDto,RegistrationSuccessResponseDto,LoginSuccessResponseDto} = require('../dto/response/authResponseDto');
 
 const AuthController = {
   async register(req, res, next) {
     try {
-      const { username, email, password } = req.body;
+      const { username, email, password, role } = req.body;
+      
 
       // 유효성 검사 호출
-      validateRegistration(username, email, password);
+      validateRegistration(username, email, password,role);
 
-      const registerDto = new RegisterUserRequestDto(username, email, password);
+      const registerDto = new RegisterUserRequestDto(username, email, password,role);
 
       const registeredUserData = await AuthService.register(
         registerDto.username,
         registerDto.email,
-        registerDto.password
+        registerDto.password,
+        registerDto.role
       );
 
       const userResponse = new UserResponseDto(registeredUserData.id, registeredUserData.username, registeredUserData.email);

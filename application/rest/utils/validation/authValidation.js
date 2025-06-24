@@ -7,7 +7,7 @@ const createValidationError = (message, statusCode = 400) => {
     return error;
   };
   
-  const validateRegistration = (username, email, password) => {
+  const validateRegistration = (username, email, password, role) => { // role 인자 추가
     if (!username || typeof username !== 'string' || username.trim() === "") {
       throw createValidationError('Username is required and must be a non-empty string.');
     }
@@ -24,10 +24,15 @@ const createValidationError = (message, statusCode = 400) => {
     if (password.length < 6) {
       throw createValidationError('Password must be at least 6 characters long.');
     }
-    // 모든 유효성 검사 통과 시에는 아무것도 반환하지 않거나, true 등을 반환할 수 있습니다.
-    // 여기서는 오류가 없으면 그냥 통과시킵니다 (오류 발생 시 throw).
+    // Role 유효성 검사 추가
+    if (!role || typeof role !== 'string' || role.trim() === "") {
+      throw createValidationError('Role is required and must be a non-empty string.');
+    }
+    const allowedRoles = ['worker', 'employer']; // 허용되는 역할 정의
+    if (!allowedRoles.includes(role)) {
+      throw createValidationError(`Invalid role. Allowed roles are: ${allowedRoles.join(', ')}.`);
+    }
   };
-  
   const validateLogin = (email, password) => {
 
 
