@@ -67,4 +67,4 @@ const UserEntity = new EntitySchema({
     // }
 });
 
-module.exports = { UserEntity };
+module.exports = UserEntity ;

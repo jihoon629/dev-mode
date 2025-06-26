@@ -1,7 +1,8 @@
     // application/rest/config/dbConfig.js (TypeORM DataSource 설정 예시)
     require('reflect-metadata');
     const { DataSource } = require("typeorm");
-    const { UserEntity } = require('../repo/entity/user.entity'); // UserEntity 경로 확인 필요
+    const path = require('path'); // path 모듈 추가
+
 
     const AppDataSource = new DataSource({
         type: "mariadb", 
@@ -10,9 +11,10 @@
         username: process.env.DB_USER || 'root',
         password: process.env.DB_PASSWORD || '1',
         database: process.env.DB_NAME || 'nogada',
-        synchronize: process.env.NODE_ENV === 'development',
+        synchronize: true,
         logging: process.env.NODE_ENV === 'development' ? ['query', 'error'] : ['error'],
-        entities: [ UserEntity ], // UserEntity 등록
+        entities: [         path.join(__dirname, '..', 'repo', 'entity', '**', '*.entity.js')
+        ], // UserEntity 등록
         extra: {
             waitForConnections: true,
             connectionLimit: process.env.DB_CONNECTION_LIMIT ? parseInt(process.env.DB_CONNECTION_LIMIT, 10) : 10,
