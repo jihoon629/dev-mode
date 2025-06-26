@@ -1,6 +1,6 @@
 // application/rest/service/authService.js
 const jwt = require('jsonwebtoken');
-const userModel = require('../models/userModel');
+const userModel = require('../repo/models/userModel');
 const { ensureFabricIdentity } = require('../utils/fabricWallet/fabric');
 const jwtConfig = require('../config/jwtConfig');
 const logger = require('../config/logger');
