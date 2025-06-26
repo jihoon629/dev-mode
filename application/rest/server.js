@@ -34,11 +34,10 @@ async function startApplication() {
     console.log('TypeORM Data Source가 성공적으로 초기화되었습니다.');
 
 
-    // 2. Fabric 관리자 인롤 (지갑에 관리자 ID 준비) - 테스트 중 비활성화
-    //    관리자 ID와 비밀번호는 환경변수나 보안된 설정에서 가져오는 것이 이상적입니다.
-    console.log("Fabric 관리자 인롤을 건너뜁니다 (테스트 모드)...");
-    // await sdk.enrollAdmin('admin', 'adminpw'); // 실제 관리자 ID와 비밀번호로 변경
-    console.log("Fabric 관리자 인롤 확인 완료 (테스트 모드).");
+    // 2. Fabric 관리자 인롤 (지갑에 관리자 ID 준비) 
+    console.log("Fabric 관리자 인롤을 건너뜁니다");
+    await sdk.enrollAdmin('admin', 'adminpw'); // 실제 관리자 ID와 비밀번호로 변경
+    console.log("Fabric 관리자 인롤 확인 완료.");
 
     // 3. 서버 리스닝 시작
     const HOST = process.env.HOST || '0.0.0.0'; // 모든 네트워크 인터페이스에서 수신

@@ -83,7 +83,7 @@ Content-Type: application/json
 ```bash
 # Gemini AI 설정
 GEMINI_API_KEY=your_gemini_api_key
-GEMINI_MODEL=gemini-1.5-flash
+GEMINI_MODEL=gemini-2.5-pro
 GEMINI_TEMPERATURE=0.7
 GEMINI_MAX_TOKENS=1000
 GEMINI_BATCH_SIZE=10
