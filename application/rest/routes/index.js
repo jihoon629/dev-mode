@@ -2,11 +2,15 @@
     const express = require('express');
     const router = express.Router();
     const authRoutes = require('./authRoutes');
+    const searchRoutes = require('./searchRoutes'); // 검색 라우트 추가
     const llmService = require('../service/llmService'); // llmService 임포트
     const logger = require('../config/logger'); // 로거 임포트
 
     // '/auth' 경로로 들어오는 요청은 authRoutes에서 처리
     router.use('/auth', authRoutes);
+    
+    // '/search' 경로로 들어오는 요청은 searchRoutes에서 처리
+    router.use('/search', searchRoutes);
 
     router.get('/test-llm', async (req, res, next) => {
         try {
