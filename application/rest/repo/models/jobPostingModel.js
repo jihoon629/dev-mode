@@ -1,0 +1,199 @@
+// application/rest/repo/models/jobPostingModel.js
+const logger = require('../../config/logger');
+const { AppDataSource } = require('../../config/dbConfig');
+const { JobPostingEntity } = require('../entity/jobPosting.entity');
+
+const jobPostingRepository = AppDataSource.getRepository(JobPostingEntity);
+
+const JobPostingModel = {
+  async create(postingData) {
+    const { 
+      userId, jobType, region, siteDescription, dailyWage, requiredSkills,
+      workStartDate, workEndDate, workHours, contactInfo 
+    } = postingData;
+    
+    try {
+      const newJobPosting = jobPostingRepository.create({
+        user_id: userId,
+        job_type: jobType,
+        region: region,
+        site_description: siteDescription,
+        daily_wage: dailyWage,
+        required_skills: Array.isArray(requiredSkills) ? JSON.stringify(requiredSkills) : requiredSkills,
+        work_start_date: workStartDate,
+        work_end_date: workEndDate,
+        work_hours: workHours,
+        contact_info: contactInfo,
+        is_active: true,
+        view_count: 0
+      });
+
+      await jobPostingRepository.save(newJobPosting);
+      logger.info(`[JobPostingModel-create] 공고 생성 완료. ID: ${newJobPosting.id}, 사용자ID: ${userId}`);
+      return newJobPosting;
+      
+    } catch (error) {
+      logger.error(`[JobPostingModel-create] 공고 생성 오류: ${error.message}`, { postingData, stack: error.stack });
+      throw error;
+    }
+  },
+
+  async findByUserId(userId) {
+    try {
+      const postings = await jobPostingRepository.find({
+        where: { user_id: userId },
+        relations: ['user'],
+        order: { created_at: 'DESC' }
+      });
+      return postings;
+    } catch (error) {
+      logger.error(`[JobPostingModel-findByUserId] 오류: ${error.message}`, { userId, stack: error.stack });
+      throw error;
+    }
+  },
+
+  async findById(id) {
+    try {
+      const posting = await jobPostingRepository.findOne({
+        where: { id: id },
+        relations: ['user']
+      });
+      return posting;
+    } catch (error) {
+      logger.error(`[JobPostingModel-findById] 오류: ${error.message}`, { id, stack: error.stack });
+      throw error;
+    }
+  },
+
+  async findActivePostings(filters = {}) {
+    try {
+      const { jobType, region, minWage, maxWage, startDate, endDate, limit = 20, offset = 0 } = filters;
+      
+      let queryBuilder = jobPostingRepository.createQueryBuilder('posting')
+        .leftJoinAndSelect('posting.user', 'user')
+        .where('posting.is_active = :isActive', { isActive: true })
+        .andWhere('user.role = :role', { role: 'employer' });
+
+      if (jobType) {
+        queryBuilder.andWhere('posting.job_type LIKE :jobType', { jobType: `%${jobType}%` });
+      }
+
+      if (region) {
+        queryBuilder.andWhere('posting.region LIKE :region', { region: `%${region}%` });
+      }
+
+      if (minWage) {
+        queryBuilder.andWhere('posting.daily_wage >= :minWage', { minWage });
+      }
+
+      if (maxWage) {
+        queryBuilder.andWhere('posting.daily_wage <= :maxWage', { maxWage });
+      }
+
+      if (startDate) {
+        queryBuilder.andWhere('posting.work_start_date >= :startDate', { startDate });
+      }
+
+      if (endDate) {
+        queryBuilder.andWhere('posting.work_end_date <= :endDate', { endDate });
+      }
+
+      const postings = await queryBuilder
+        .orderBy('posting.created_at', 'DESC')
+        .limit(limit)
+        .offset(offset)
+        .getMany();
+
+      return postings;
+    } catch (error) {
+      logger.error(`[JobPostingModel-findActivePostings] 오류: ${error.message}`, { filters, stack: error.stack });
+      throw error;
+    }
+  },
+
+  async update(id, updateData) {
+    try {
+      const { 
+        jobType, region, siteDescription, dailyWage, requiredSkills,
+        workStartDate, workEndDate, workHours, contactInfo, isActive 
+      } = updateData;
+      
+      const updateFields = {};
+      if (jobType !== undefined) updateFields.job_type = jobType;
+      if (region !== undefined) updateFields.region = region;
+      if (siteDescription !== undefined) updateFields.site_description = siteDescription;
+      if (dailyWage !== undefined) updateFields.daily_wage = dailyWage;
+      if (requiredSkills !== undefined) updateFields.required_skills = Array.isArray(requiredSkills) ? JSON.stringify(requiredSkills) : requiredSkills;
+      if (workStartDate !== undefined) updateFields.work_start_date = workStartDate;
+      if (workEndDate !== undefined) updateFields.work_end_date = workEndDate;
+      if (workHours !== undefined) updateFields.work_hours = workHours;
+      if (contactInfo !== undefined) updateFields.contact_info = contactInfo;
+      if (isActive !== undefined) updateFields.is_active = isActive;
+
+      const result = await jobPostingRepository.update(id, updateFields);
+      
+      if (result.affected === 0) {
+        throw new Error('공고를 찾을 수 없습니다.');
+      }
+
+      logger.info(`[JobPostingModel-update] 공고 업데이트 완료. ID: ${id}`);
+      return await this.findById(id);
+      
+    } catch (error) {
+      logger.error(`[JobPostingModel-update] 오류: ${error.message}`, { id, updateData, stack: error.stack });
+      throw error;
+    }
+  },
+
+  async delete(id) {
+    try {
+      const result = await jobPostingRepository.delete(id);
+      
+      if (result.affected === 0) {
+        throw new Error('공고를 찾을 수 없습니다.');
+      }
+
+      logger.info(`[JobPostingModel-delete] 공고 삭제 완료. ID: ${id}`);
+      return true;
+      
+    } catch (error) {
+      logger.error(`[JobPostingModel-delete] 오류: ${error.message}`, { id, stack: error.stack });
+      throw error;
+    }
+  },
+
+  async incrementViewCount(id) {
+    try {
+      await jobPostingRepository.increment({ id }, 'view_count', 1);
+      logger.info(`[JobPostingModel-incrementViewCount] 조회수 증가. ID: ${id}`);
+    } catch (error) {
+      logger.error(`[JobPostingModel-incrementViewCount] 오류: ${error.message}`, { id, stack: error.stack });
+      throw error;
+    }
+  },
+
+  async searchByKeyword(keyword, limit = 10) {
+    try {
+      const postings = await jobPostingRepository.createQueryBuilder('posting')
+        .leftJoinAndSelect('posting.user', 'user')
+        .where('posting.is_active = :isActive', { isActive: true })
+        .andWhere('user.role = :role', { role: 'employer' })
+        .andWhere(`(
+          posting.job_type LIKE :keyword OR 
+          posting.region LIKE :keyword OR 
+          posting.site_description LIKE :keyword OR 
+          posting.required_skills LIKE :keyword
+        )`, { keyword: `%${keyword}%` })
+        .orderBy('posting.created_at', 'DESC')
+        .limit(limit)
+        .getMany();
+
+      return postings;
+    } catch (error) {
+      logger.error(`[JobPostingModel-searchByKeyword] 오류: ${error.message}`, { keyword, stack: error.stack });
+      throw error;
+    }
+  }
+};
+
+module.exports = JobPostingModel;

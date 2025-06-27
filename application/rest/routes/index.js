@@ -11,6 +11,14 @@
     
     // '/search' 경로로 들어오는 요청은 searchRoutes에서 처리
     router.use('/search', searchRoutes);
+    
+    // '/resumes' 경로로 들어오는 요청은 resumeRoutes에서 처리
+    const resumeRoutes = require('./resumeRoutes');
+    router.use('/resumes', resumeRoutes);
+    
+    // '/job-postings' 경로로 들어오는 요청은 jobPostingRoutes에서 처리
+    const jobPostingRoutes = require('./jobPostingRoutes');
+    router.use('/job-postings', jobPostingRoutes);
 
     router.get('/test-llm', async (req, res, next) => {
         try {

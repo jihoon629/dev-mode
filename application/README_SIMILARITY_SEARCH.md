@@ -242,3 +242,65 @@ application/rest/
 - 검색 결과 하이라이팅
 - 자동완성 기능
 - 검색 히스토리 관리
+
+06/27
+구현된 구조
+
+  📋 이력서 테이블 (resumes)
+
+  - user_id - worker 역할 사용자와 연결
+  - job_type - 직종 (건설, 제조, 서비스 등)
+  - region - 희망 근무 지역
+  - self_introduction - 자기소개
+  - desired_daily_wage - 희망 일급
+  - skills - 보유 기술/경험
+
+  🏗️ 현장 공고 테이블 (job_postings)
+
+  - user_id - employer 역할 사용자와 연결
+  - job_type - 직종
+  - region - 근무 지역
+  - site_description - 현장 소개
+  - daily_wage - 일급
+  - required_skills - 필요 기술
+  - work_start_date/end_date - 작업 기간
+  - contact_info - 연락처
+
+  🚀 API 엔드포인트
+
+  이력서 API (/api/resumes)
+
+  - POST / - 이력서 생성
+  - GET /user/:userId - 특정 사용자 이력서 목록
+  - GET /:id - 이력서 상세 조회
+  - PUT /:id - 이력서 수정
+  - DELETE /:id - 이력서 삭제
+  - GET /search/general - 일반 검색
+  - GET /search/similarity - Gemini AI 유사성 검색
+
+  현장 공고 API (/api/job-postings)
+
+  - POST / - 공고 생성
+  - GET /user/:userId - 특정 사용자 공고 목록
+  - GET /:id - 공고 상세 조회 (조회수 증가)
+  - PUT /:id - 공고 수정
+  - DELETE /:id - 공고 삭제
+  - GET /search/general - 일반 검색
+  - GET /search/similarity - Gemini AI 유사성 검색
+
+  🔍 유사성 검색 기능
+
+  각 테이블에서 사용 가능한 검색 필드:
+  - 이력서: job_type, region, self_introduction,
+  skills
+  - 현장공고: job_type, region, site_description,
+  required_skills
+
+  예시:
+  # 건설 관련 이력서 찾기
+  GET /api/resumes/search/similarity?query=건설기술자&
+  field=job_type&minSimilarity=70
+
+  # 서울 지역 공고 찾기  
+  GET /api/job-postings/search/similarity?query=서울&f
+  ield=region&minSimilarity=50
