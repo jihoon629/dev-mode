@@ -1,0 +1,97 @@
+// application/rest/repo/entity/resume.entity.js
+const { EntitySchema } = require("typeorm");
+
+const ResumeEntity = new EntitySchema({
+    name: "Resume", 
+    tableName: "resumes", 
+    columns: {
+        id: {
+            type: "int",
+            primary: true,
+            generated: "increment",
+        },
+        user_id: {
+            type: "int",
+            nullable: false,
+        },
+        job_type: {
+            type: "varchar",
+            length: 100,
+            nullable: false,
+            comment: "직종 (예: 건설, 제조, 서비스 등)"
+        },
+        region: {
+            type: "varchar",
+            length: 100,
+            nullable: false,
+            comment: "희망 근무 지역"
+        },
+        self_introduction: {
+            type: "text",
+            nullable: true,
+            comment: "자기소개"
+        },
+        desired_daily_wage: {
+            type: "decimal",
+            precision: 10,
+            scale: 0,
+            nullable: true,
+            comment: "희망 일급 (원)"
+        },
+        skills: {
+            type: "text",
+            nullable: true,
+            comment: "보유 기술 및 경험 (JSON 형태 또는 콤마 구분)"
+        },
+        is_active: {
+            type: "boolean",
+            default: true,
+            nullable: false,
+            comment: "이력서 활성화 상태"
+        },
+        created_at: {
+            type: "timestamp",
+            createDate: true,
+            nullable: true,
+            default: () => "CURRENT_TIMESTAMP",
+        },
+        updated_at: {
+            type: "timestamp",
+            updateDate: true,
+            nullable: true,
+            default: () => "CURRENT_TIMESTAMP",
+            onUpdate: "CURRENT_TIMESTAMP",
+        },
+    },
+    relations: {
+        user: {
+            type: "many-to-one",
+            target: "User",
+            joinColumn: {
+                name: "user_id",
+                referencedColumnName: "id"
+            },
+            onDelete: "CASCADE",
+        }
+    },
+    indices: [
+        {
+            name: "IDX_RESUME_USER_ID",
+            columns: ["user_id"]
+        },
+        {
+            name: "IDX_RESUME_JOB_TYPE",
+            columns: ["job_type"]
+        },
+        {
+            name: "IDX_RESUME_REGION",
+            columns: ["region"]
+        },
+        {
+            name: "IDX_RESUME_ACTIVE",
+            columns: ["is_active"]
+        }
+    ]
+});
+
+module.exports = { ResumeEntity };

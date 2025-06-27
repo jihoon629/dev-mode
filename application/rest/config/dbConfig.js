@@ -13,8 +13,9 @@
         database: process.env.DB_NAME || 'nogada',
         synchronize: true,
         logging: process.env.NODE_ENV === 'development' ? ['query', 'error'] : ['error'],
-        entities: [         path.join(__dirname, '..', 'repo', 'entity', '**', '*.entity.js')
-        ], // UserEntity 등록
+        entities: [         
+            path.join(__dirname, '..', 'repo', 'entity', '**', '*.entity.js')
+        ], // UserEntity, ResumeEntity, JobPostingEntity 등록
         extra: {
             waitForConnections: true,
             connectionLimit: process.env.DB_CONNECTION_LIMIT ? parseInt(process.env.DB_CONNECTION_LIMIT, 10) : 10,
