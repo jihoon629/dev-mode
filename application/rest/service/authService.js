@@ -177,5 +177,20 @@ class AuthService {
             lastName: profile.name && profile.name.familyName ? profile.name.familyName : '',
         };
     }
+
+    async findUserById(id) {
+        logger.info(`[Auth서비스] 사용자 ID로 조회 시도: ${id}`);
+        logger.debug('Searching for user with ID:', id);
+        try {
+            const user = await userModel.findById(id);
+            if (!user) {
+                logger.warn(`[Auth서비스] 사용자 ID [${id}]를 찾을 수 없습니다.`);
+            }
+            return user;
+        } catch (error) {
+            logger.error(`[Auth서비스] 사용자 ID [${id}] 조회 중 오류 발생: ${error.message}`, { id, stack: error.stack });
+            throw error;
+        }
+    }
 }
 module.exports = new AuthService();

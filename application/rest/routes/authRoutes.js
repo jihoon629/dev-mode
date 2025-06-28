@@ -27,4 +27,7 @@ router.get('/google/callback',
   authControllerInstance.handleGoogleCallback // 인스턴스 메소드 호출
 );
 
+// 현재 로그인된 사용자 정보 가져오기
+router.get('/me', passport.authenticate('jwt', { session: false }), authControllerInstance.getMe);
+
 module.exports = router;

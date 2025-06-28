@@ -4,6 +4,7 @@ import express from 'express';
 import morgan from 'morgan';
 import path from 'path';
 import cors from 'cors';
+import cookieParser from 'cookie-parser'; // cookie-parser 추가
 import { fileURLToPath } from 'url';
 import passport from './config/passportConfig.js';
 import logger from './config/logger.js';
@@ -37,11 +38,20 @@ function setupMiddlewares() {
   // 기본 미들웨어
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
+  app.use(cookieParser()); // cookie-parser 미들웨어 사용
   app.use(passport.initialize());
   app.use(cors({
     origin: 'http://localhost:3000',
     credentials: true
   }));
+
+  // 요청 로깅 미들웨어 추가
+  app.use((req, res, next) => {
+    logger.info(`[Request Logger] Path: ${req.path}, Method: ${req.method}`);
+    logger.debug('[Request Logger] Headers:', req.headers);
+    logger.debug('[Request Logger] Cookies:', req.cookies); // req.cookies를 로그로 남김
+    next();
+  });
 
   // 로깅 미들웨어
   if (process.env.NODE_ENV !== 'production') {

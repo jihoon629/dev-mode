@@ -3,6 +3,10 @@ const express = require('express');
 const resumeController = require('../controller/resumeController');
 const router = express.Router();
 
+// 이력서 기반 공고 추천
+// GET /api/resumes/:id/recommendations
+router.get('/:id/recommendations', resumeController.getJobRecommendations);
+
 // 이력서 생성
 // POST /api/resumes
 router.post('/', resumeController.createResume);

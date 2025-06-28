@@ -11,14 +11,23 @@ class LLMService {
         }
         
         this.genAI = new GoogleGenerativeAI(apiKey);
-        this.model = this.genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+        this.model = this.genAI.getGenerativeModel({ model: 'gemini-2.5-pro' });
     }
 
     async generateTextWithGemini(prompt) {
         try {
             logger.info(`[LLMService] Gemini 텍스트 생성 요청: ${prompt.substring(0, 100)}...`);
             
-            const result = await this.model.generateContent(prompt);
+            // 일관된 결과를 위해 temperature를 0으로 설정
+            const generationConfig = {
+                temperature: 0,
+            };
+
+            const result = await this.model.generateContent({
+                contents: [{ role: "user", parts: [{ text: prompt }] }],
+                generationConfig,
+            });
+
             const response = await result.response;
             const text = response.text();
             

@@ -1,9 +1,50 @@
 // application/rest/config/passportConfig.js
 const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
-// const User = require('../models/userModel'); // AuthService를 통해 User 모델에 접근하므로 직접 필요 X
-const AuthService = require('../service/authService'); // AuthService를 import
+const JwtStrategy = require('passport-jwt').Strategy;
+const ExtractJwt = require('passport-jwt').ExtractJwt;
+const AuthService = require('../service/authService');
 const oauthConfig = require('./oauthConfig');
+const jwtConfig = require('./jwtConfig');
+const logger = require('./logger'); // logger 추가
+
+// JWT Strategy Options
+const jwtOptions = {
+  jwtFromRequest: ExtractJwt.fromExtractors([
+    (req) => {
+      let token = null;
+      if (req && req.cookies) {
+        token = req.cookies['token'];
+        logger.debug(`[Passport JWT] Token found in cookies: ${token}`);
+      } else {
+        logger.debug('[Passport JWT] No cookies found on request.');
+      }
+      return token;
+    },
+  ]),
+  secretOrKey: jwtConfig.secret,
+};
+
+// JWT Strategy
+passport.use(
+  new JwtStrategy(jwtOptions, async (jwt_payload, done) => {
+    try {
+      logger.debug('[Passport JWT] Verifying token payload:', jwt_payload);
+      // JWT 페이로드에서 사용자 ID를 사용하여 사용자 조회
+      const user = await AuthService.findUserById(jwt_payload.id); // jwt_payload.id는 JWT에 저장된 사용자 ID
+      if (user) {
+        logger.info(`[Passport JWT] User authenticated successfully: ${user.email}`);
+        return done(null, user); // 사용자 존재 시 user 객체 반환
+      } else {
+        logger.warn(`[Passport JWT] User not found for ID: ${jwt_payload.id}`);
+        return done(null, false); // 사용자 존재하지 않을 시 false 반환
+      }
+    } catch (error) {
+      logger.error('[Passport JWT] Error during authentication:', error);
+      return done(error, false); // 에러 발생 시 에러 반환
+    }
+  })
+);
 
 passport.use(new GoogleStrategy({
     clientID: oauthConfig.googleClientID,
@@ -36,7 +77,7 @@ passport.use(new GoogleStrategy({
         return done(null, userForPassport);
       } else {
         // AuthService에서 오류를 throw하지 않고, 실패를 나타내는 응답을 반환한 경우
-        // 또는 예상치 못한 응답 형식인 경우
+        // 또는 예상치 못한 응��� 형식인 경우
         return done(new Error('Failed to process Google user via AuthService.'), null);
       }
 

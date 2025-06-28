@@ -4,6 +4,8 @@ const { AppDataSource } = require('../config/dbConfig');
 const { UserEntity } = require('../repo/entity/user.entity');
 const logger = require('../config/logger');
 
+//현재 안씀
+
 class SearchController {
     constructor() {
         this.userRepository = AppDataSource.getRepository(UserEntity);
