@@ -253,6 +253,66 @@ const ABstore = class {
       return shim.error(errMsg);
     }
   }
+
+  async RecordWorkExperience(stub, args) {
+    console.info('========= ABstore RecordWorkExperience =========');
+    if (args.length !== 5) {
+      const errMsg = 'Incorrect number of arguments. Expecting 5: jobPostingId, jobTitle, workerId, employerId, workPeriod';
+      console.error(errMsg);
+      return shim.error(errMsg);
+    }
+
+    const [jobPostingId, jobTitle, workerId, employerId, workPeriod] = args;
+
+    const experience = {
+      docType: 'experience',
+      jobPostingId: jobPostingId,
+      jobTitle: jobTitle,
+      workerId: workerId,
+      employerId: employerId,
+      workPeriod: workPeriod,
+      timestamp: new Date().toISOString(),
+    };
+
+    try {
+      const compositeKey = stub.createCompositeKey('experience~workerId~jobPostingId', [workerId, jobPostingId]);
+      await stub.putState(compositeKey, Buffer.from(JSON.stringify(experience)));
+      console.info(`Successfully recorded work experience for worker ${workerId} on job ${jobPostingId}`);
+      return shim.success(Buffer.from(JSON.stringify(experience)));
+    } catch (err) {
+      const errMsg = `Failed to record work experience: ${err.toString()}`;
+      console.error(errMsg, err);
+      return shim.error(errMsg);
+    }
+  }
+
+  async GetWorkHistoryForWorker(stub, args) {
+    console.info('========= ABstore GetWorkHistoryForWorker =========');
+    if (args.length !== 1) {
+      const errMsg = 'Incorrect number of arguments. Expecting 1: workerId';
+      console.error(errMsg);
+      return shim.error(errMsg);
+    }
+    const workerId = args[0];
+
+    try {
+      const iterator = await stub.getStateByPartialCompositeKey('experience~workerId~jobPostingId', [workerId]);
+      const results = [];
+      let res = await iterator.next();
+      while (!res.done) {
+        if (res.value && res.value.value.toString()) {
+          results.push(JSON.parse(res.value.value.toString('utf8')));
+        }
+        res = await iterator.next();
+      }
+      await iterator.close();
+      return shim.success(Buffer.from(JSON.stringify(results)));
+    } catch (err) {
+      const errMsg = `Failed to get work history for worker ${workerId}: ${err.toString()}`;
+      console.error(errMsg, err);
+      return shim.error(errMsg);
+    }
+  }
 };
 
 shim.start(new ABstore());

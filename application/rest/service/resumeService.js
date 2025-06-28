@@ -2,6 +2,7 @@
 // application/rest/service/resumeService.js
 const ResumeModel = require('../repo/models/resumeModel');
 const similarityService = require('./similarityService');
+const userService = require('./userService'); // userService 임포트
 
 class ResumeService {
   async createResume(createDto) {
@@ -13,7 +14,19 @@ class ResumeService {
   }
 
   async getResumeById(id) {
-    return await ResumeModel.findById(id);
+    const resume = await ResumeModel.findById(id);
+    if (!resume) {
+      throw new Error('이력서를 찾을 수 없습니다.');
+    }
+
+    // 블록체인에서 경력 정보 조회
+    const experience = await userService.getUserExperience(resume.user_id);
+
+    // 이력서 정보와 경력 정보를 합쳐서 반환
+    return {
+      ...resume,
+      blockchainExperience: experience,
+    };
   }
 
   async updateResume(id, updateDto) {

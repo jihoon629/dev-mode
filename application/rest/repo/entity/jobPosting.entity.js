@@ -14,6 +14,12 @@ const JobPostingEntity = new EntitySchema({
             type: "int",
             nullable: false,
         },
+        title: {
+            type: "varchar",
+            length: 255,
+            nullable: false,
+            comment: "공고 제목"
+        },
         job_type: {
             type: "varchar",
             length: 100,

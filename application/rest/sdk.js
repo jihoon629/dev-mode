@@ -148,74 +148,55 @@ async function registerAndEnrollUser(registrarUserId, userIdToRegister, affiliat
 }
 
 
-// --- 기존 send 함수 (체인코드 호출) ---
-// TODO: send 함수도 identity를 파라미터로 받아 동적으로 처리하는 것을 고려
-const org1UserId = 'appUser'; // 이 부분은 registerAndEnrollUser로 생성된 사용자의 ID로 대체되어야 함
-async function send(type, func, args, res, result) {
+// --- 체인코드 호출 함수 (리팩토링) ---
+async function invokeChaincode(isQuery, identity, func, args = []) {
+    const gateway = new Gateway();
     try {
         const ccp = await getCcp();
         const wallet = await getWallet();
-        console.log(`Wallet path: ${walletPath}`);
 
-        // 현재는 'appUser'로 고정되어 있음. 실제로는 회원가입된 사용자의 ID를 사용해야 함.
-        const identityToUse = org1UserId; // 또는 req.user.fabricId 등 요청 컨텍스트에서 가져옴
-        const userIdentity = await wallet.get(identityToUse);
+        const userIdentity = await wallet.get(identity);
         if (!userIdentity) {
-            console.error(`Identity for user "${identityToUse}" not found in wallet.`);
-            return res.status(401).send({ error: `User identity "${identityToUse}" not found. Please register/enroll.` });
+            throw new Error(`Identity for user "${identity}" not found in wallet.`);
         }
 
-        const gateway = new Gateway();
-        try {
-            await gateway.connect(ccp, {
-                wallet,
-                identity: identityToUse, // 동적 ID 사용
-                discovery: { enabled: true, asLocalhost: (ccp.peers && Object.keys(ccp.peers).some(key => key.includes('localhost'))) }
-            });
-            console.log(`Successfully connected to network as ${identityToUse}`);
+        await gateway.connect(ccp, {
+            wallet,
+            identity: identity,
+            discovery: { enabled: true, asLocalhost: (ccp.peers && Object.keys(ccp.peers).some(key => key.includes('localhost'))) }
+        });
 
-            const network = await gateway.getNetwork(channelName);
-            const contract = network.getContract(chaincodeName);
+        const network = await gateway.getNetwork(channelName);
+        const contract = network.getContract(chaincodeName);
 
-            if (type) { // true: query, false: invoke
-                console.log(`Evaluating transaction: ${func} with args: ${args}`);
-                result = await contract.evaluateTransaction(func, ...args);
-                console.log(`Transaction evaluated successfully. Result: ${result.toString()}`);
-                // evaluateTransaction의 결과는 Buffer이므로, JSON으로 파싱 시도 전에 문자열로 변환 확인
-                try {
-                    // 결과가 JSON 문자열 형태일 경우 파싱 시도
-                    res.json(JSON.parse(result.toString()));
-                } catch (parseError) {
-                    // JSON 파싱 실패 시 일반 문자열로 응답
-                    res.send(result.toString());
-                }
-            } else {
-                console.log(`Submitting transaction: ${func} with args: ${args}`);
-                result = await contract.submitTransaction(func, ...args);
-                // submitTransaction은 보통 결과로 아무것도 반환하지 않거나 (undefined), 트랜잭션 ID를 반환할 수 있음
-                // 여기서는 성공 메시지만 반환
-                console.log(`Transaction submitted successfully. Result (if any): ${result}`);
-                res.json({ message: "Transaction submitted successfully", transactionId: result ? result.toString() : undefined });
-            }
-        } catch (error) {
-            console.error(`Error during transaction processing for ${identityToUse}:`, error.stack);
-            res.status(500).send({ error: `Failed to process transaction: ${error.message || error}` });
-        } finally {
-            if (gateway && typeof gateway.disconnect === 'function') {
-                gateway.disconnect();
-                console.log('Gateway disconnected.');
-            }
+        let result;
+        if (isQuery) {
+            console.log(`Evaluating transaction: ${func} with args: ${args}`);
+            result = await contract.evaluateTransaction(func, ...args);
+            console.log(`Transaction evaluated successfully. Result: ${result.toString()}`);
+        } else {
+            console.log(`Submitting transaction: ${func} with args: ${args}`);
+            result = await contract.submitTransaction(func, ...args);
+            console.log(`Transaction submitted successfully. Result (if any): ${result}`);
         }
+        return result;
+
     } catch (error) {
-        console.error('Error setting up gateway or wallet:', error.stack);
-        res.status(500).send({ error: `Server setup error: ${error.message || error}` });
+        console.error(`Error during chaincode invocation for ${identity}:`, error.stack);
+        // 에러를 다시 던져서 호출한 쪽에서 처리하도록 함
+        throw new Error(`Failed to process transaction: ${error.message || error}`);
+    } finally {
+        if (gateway && typeof gateway.disconnect === 'function') {
+            gateway.disconnect();
+            console.log('Gateway disconnected.');
+        }
     }
 }
 
 module.exports = {
-  send,
+  invokeChaincode,
   enrollAdmin,
   registerAndEnrollUser,
-  getWallet, // 외부에서 지갑 객체 접근이 필요할 경우 export
-  getCcp    // 외부에서 CCP 객체 접근이 필요할 경우 export
+  getWallet,
+  getCcp
 };

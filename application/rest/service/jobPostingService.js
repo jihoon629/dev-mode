@@ -64,6 +64,10 @@ class JobPostingService {
 
     return filteredResults.slice(0, parseInt(limit));
   }
+
+  async getAllJobPostings() {
+    return await JobPostingModel.findAllActive();
+  }
 }
 
 module.exports = new JobPostingService();

@@ -5,6 +5,7 @@ class JobPostingResponseDto {
     constructor(posting) {
         this.id = posting.id;
         this.userId = posting.user_id;
+        this.title = posting.title;
         this.jobType = posting.job_type;
         this.region = posting.region;
         this.siteDescription = posting.site_description;

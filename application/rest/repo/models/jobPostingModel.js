@@ -8,13 +8,14 @@ const jobPostingRepository = AppDataSource.getRepository(JobPostingEntity);
 const JobPostingModel = {
   async create(postingData) {
     const { 
-      userId, jobType, region, siteDescription, dailyWage, requiredSkills,
+      userId, title, jobType, region, siteDescription, dailyWage, requiredSkills,
       workStartDate, workEndDate, workHours, contactInfo 
     } = postingData;
     
     try {
       const newJobPosting = jobPostingRepository.create({
         user_id: userId,
+        title: title,
         job_type: jobType,
         region: region,
         site_description: siteDescription,
@@ -114,11 +115,12 @@ const JobPostingModel = {
   async update(id, updateData) {
     try {
       const { 
-        jobType, region, siteDescription, dailyWage, requiredSkills,
+        title, jobType, region, siteDescription, dailyWage, requiredSkills,
         workStartDate, workEndDate, workHours, contactInfo, isActive 
       } = updateData;
       
       const updateFields = {};
+      if (title !== undefined) updateFields.title = title;
       if (jobType !== undefined) updateFields.job_type = jobType;
       if (region !== undefined) updateFields.region = region;
       if (siteDescription !== undefined) updateFields.site_description = siteDescription;
@@ -191,6 +193,20 @@ const JobPostingModel = {
       return postings;
     } catch (error) {
       logger.error(`[JobPostingModel-searchByKeyword] 오류: ${error.message}`, { keyword, stack: error.stack });
+      throw error;
+    }
+  },
+
+  async findAllActive() {
+    try {
+      const postings = await jobPostingRepository.find({
+        where: { is_active: true },
+        relations: ['user'],
+        order: { created_at: 'DESC' }
+      });
+      return postings;
+    } catch (error) {
+      logger.error(`[JobPostingModel-findAllActive] 오류: ${error.message}`, { stack: error.stack });
       throw error;
     }
   }

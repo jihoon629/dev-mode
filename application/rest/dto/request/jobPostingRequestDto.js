@@ -2,8 +2,9 @@
 // application/rest/dto/request/jobPostingRequestDto.js
 
 class CreateJobPostingRequestDto {
-    constructor(userId, jobType, region, siteDescription, dailyWage, requiredSkills, workStartDate, workEndDate, workHours, contactInfo) {
+    constructor(userId, title, jobType, region, siteDescription, dailyWage, requiredSkills, workStartDate, workEndDate, workHours, contactInfo) {
         this.userId = userId;
+        this.title = title;
         this.jobType = jobType;
         this.region = region;
         this.siteDescription = siteDescription;
@@ -17,7 +18,8 @@ class CreateJobPostingRequestDto {
 }
 
 class UpdateJobPostingRequestDto {
-    constructor(jobType, region, siteDescription, dailyWage, requiredSkills, workStartDate, workEndDate, workHours, contactInfo) {
+    constructor(title, jobType, region, siteDescription, dailyWage, requiredSkills, workStartDate, workEndDate, workHours, contactInfo) {
+        this.title = title;
         this.jobType = jobType;
         this.region = region;
         this.siteDescription = siteDescription;

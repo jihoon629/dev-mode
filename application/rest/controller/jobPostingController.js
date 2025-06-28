@@ -15,6 +15,7 @@ const { JobPostingResponseDto, JobPostingListResponseDto } = require('../dto/res
 class JobPostingController {
     constructor() {
         this.createJobPosting = this.createJobPosting.bind(this);
+        this.getAllJobPostings = this.getAllJobPostings.bind(this);
         this.getJobPostingsByUser = this.getJobPostingsByUser.bind(this);
         this.getJobPostingById = this.getJobPostingById.bind(this);
         this.updateJobPosting = this.updateJobPosting.bind(this);
@@ -23,11 +24,27 @@ class JobPostingController {
         this.searchJobPostingsBySimilarity = this.searchJobPostingsBySimilarity.bind(this);
     }
 
+    async getAllJobPostings(req, res, next) {
+        try {
+            const postings = await jobPostingService.getAllJobPostings();
+            const responseDto = new JobPostingListResponseDto(postings);
+
+            res.json({
+                status: 'success',
+                data: responseDto,
+            });
+
+        } catch (error) {
+            logger.error(`[JobPostingController-getAllJobPostings] 오류: ${error.message}`, { stack: error.stack });
+            next(error);
+        }
+    }
+
     async createJobPosting(req, res, next) {
         try {
             validateCreateJobPosting(req.body);
-            const { userId, jobType, region, siteDescription, dailyWage, requiredSkills, workStartDate, workEndDate, workHours, contactInfo } = req.body;
-            const createDto = new CreateJobPostingRequestDto(userId, jobType, region, siteDescription, dailyWage, requiredSkills, workStartDate, workEndDate, workHours, contactInfo);
+            const { userId, title, jobType, region, siteDescription, dailyWage, requiredSkills, workStartDate, workEndDate, workHours, contactInfo } = req.body;
+            const createDto = new CreateJobPostingRequestDto(userId, title, jobType, region, siteDescription, dailyWage, requiredSkills, workStartDate, workEndDate, workHours, contactInfo);
             const newJobPosting = await jobPostingService.createJobPosting(createDto);
             const responseDto = new JobPostingResponseDto(newJobPosting);
 
@@ -90,8 +107,8 @@ class JobPostingController {
     async updateJobPosting(req, res, next) {
         try {
             validateIdParam(req.params);
-            const { jobType, region, siteDescription, dailyWage, requiredSkills, workStartDate, workEndDate, workHours, contactInfo } = req.body;
-            const updateDto = new UpdateJobPostingRequestDto(jobType, region, siteDescription, dailyWage, requiredSkills, workStartDate, workEndDate, workHours, contactInfo);
+            const { title, jobType, region, siteDescription, dailyWage, requiredSkills, workStartDate, workEndDate, workHours, contactInfo } = req.body;
+            const updateDto = new UpdateJobPostingRequestDto(title, jobType, region, siteDescription, dailyWage, requiredSkills, workStartDate, workEndDate, workHours, contactInfo);
             const updatedJobPosting = await jobPostingService.updateJobPosting(parseInt(req.params.id), updateDto);
             const responseDto = new JobPostingResponseDto(updatedJobPosting);
 
