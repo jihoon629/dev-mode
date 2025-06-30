@@ -54,7 +54,7 @@ class ResumeController {
     async createResume(req, res, next) {
         try {
             validateCreateResume(req.body);
-            const createDto = new CreateResumeRequestDto(req.body.userId, req.body.jobType, req.body.region, req.body.selfIntroduction, req.body.desiredDailyWage, req.body.skills);
+            const createDto = new CreateResumeRequestDto(req.body.userId, req.body.jobType, req.body.region, req.body.selfIntroduction, req.body.desiredDailyWage, req.body.skills, req.body.certificateImages);
             const newResume = await resumeService.createResume(createDto);
             const responseDto = new ResumeResponseDto(newResume);
 
