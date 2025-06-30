@@ -123,6 +123,89 @@
   }
   ```
 
+### 2.3. 사용자별 구인공고 조회
+- **Endpoint**: `GET /job-postings/user/:userId`
+- **Description**: 특정 사용자가 작성한 모든 구인공고 목록을 조회합니다.
+- **Success Response (200)**:
+  ```json
+  {
+    "status": "success",
+    "data": {
+      "postings": [
+        {
+          "id": 1,
+          "title": "서울 강남 현장 인력 급구",
+          "jobType": "건설",
+          "region": "서울 강남"
+        }
+      ]
+    }
+  }
+  ```
+
+### 2.4. 구인공고 생성
+- **Endpoint**: `POST /job-postings`
+- **Description**: 새로운 구인공고를 생성합니다.
+- **Request Body**:
+  ```json
+  {
+    "userId": 1,
+    "title": "새로운 구인공고",
+    "jobType": "IT",
+    "region": "서울",
+    "siteDescription": "상세 설명",
+    "dailyWage": 200000,
+    "requiredSkills": ["React", "Node.js"],
+    "workStartDate": "2025-08-01",
+    "workEndDate": "2025-12-31",
+    "workHours": "09:00-18:00",
+    "contactInfo": "010-0000-0000"
+  }
+  ```
+- **Success Response (201)**:
+  ```json
+  {
+    "message": "Job posting created successfully",
+    "data": { ... }
+  }
+  ```
+
+### 2.5. 구인공고 수정
+- **Endpoint**: `PUT /job-postings/:id`
+- **Description**: 기존 구인공고를 수정합니다.
+- **Request Body**: (수정할 필드만 포함)
+- **Success Response (200)**:
+  ```json
+  {
+    "message": "Job posting updated successfully",
+    "data": { ... }
+  }
+  ```
+
+### 2.6. 구인공고 삭제
+- **Endpoint**: `DELETE /job-postings/:id`
+- **Description**: 구인공고를 삭제합니다.
+- **Success Response (200)**:
+  ```json
+  {
+    "message": "Job posting deleted successfully"
+  }
+  ```
+
+### 2.7. 구인공고 유사도 검색
+- **Endpoint**: `GET /job-postings/search/similarity`
+- **Description**: 유사도 검색으로 구인공고를 찾습니다.
+- **Query Parameters**: `query`, `field`
+- **Success Response (200)**:
+  ```json
+  {
+    "status": "success",
+    "data": {
+      "postings": [ ... ]
+    }
+  }
+  ```
+
 ---
 
 ## 3. 이력서 (Resumes)
@@ -134,27 +217,76 @@
   ```json
   {
     "status": "success",
+    "data": { ... }
+  }
+  ```
+
+### 3.2. 사용자별 이력서 조회
+- **Endpoint**: `GET /resumes/user/:userId`
+- **Description**: 특정 사용자의 모든 이력서 목록을 조회합니다.
+- **Success Response (200)**:
+  ```json
+  {
+    "status": "success",
     "data": {
-      "id": 1,
-      "userId": 1,
-      "jobType": "건설",
-      "region": "서울",
-      "selfIntroduction": "성실하게 일합니다.",
-      "desiredDailyWage": 170000,
-      "skills": "용접, 미장",
-      "user": { "id": 1, "username": "testuser", "email": "test@example.com" },
-      "blockchainExperience": [
-        {
-          "docType": "experience",
-          "jobPostingId": "1",
-          "jobTitle": "서울 강남 현장 인력 급구",
-          "workerId": "1",
-          "employerId": "2",
-          "workPeriod": "2024-01-01 ~ 2024-06-30",
-          "timestamp": "2024-07-01T10:00:00.000Z"
-        }
-      ]
+      "resumes": [ ... ]
     }
+  }
+  ```
+
+### 3.3. 이력서 생성
+- **Endpoint**: `POST /resumes`
+- **Description**: 새로운 이력서를 생성합니다.
+- **Request Body**:
+  ```json
+  {
+    "userId": 1,
+    "jobType": "건설",
+    "region": "서울",
+    "selfIntroduction": "성실하게 일합니다.",
+    "desiredDailyWage": 170000,
+    "skills": ["용접", "미장"]
+  }
+  ```
+- **Success Response (201)**:
+  ```json
+  {
+    "message": "Resume created successfully",
+    "data": { ... }
+  }
+  ```
+
+### 3.4. 이력서 수정
+- **Endpoint**: `PUT /resumes/:id`
+- **Description**: 기존 이력서를 수정합니다.
+- **Request Body**: (수정할 필드만 포함)
+- **Success Response (200)**:
+  ```json
+  {
+    "message": "Resume updated successfully",
+    "data": { ... }
+  }
+  ```
+
+### 3.5. 이력서 삭제
+- **Endpoint**: `DELETE /resumes/:id`
+- **Description**: 이력서를 삭제합니다.
+- **Success Response (200)**:
+  ```json
+  {
+    "message": "Resume deleted successfully"
+  }
+  ```
+
+### 3.6. 이력서 유사도 검색
+- **Endpoint**: `GET /resumes/search/similarity`
+- **Description**: 유사도 검색으로 이력서를 찾습니다.
+- **Query Parameters**: `query`, `field`
+- **Success Response (200)**:
+  ```json
+  {
+    "status": "success",
+    "data": [ ... ]
   }
   ```
 
