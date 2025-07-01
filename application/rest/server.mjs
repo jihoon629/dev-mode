@@ -41,21 +41,22 @@ function setupMiddlewares() {
   app.use(cookieParser()); // cookie-parser 미들웨어 사용
   app.use(passport.initialize());
 
-  const whitelist = ['http://localhost:3000', 'http://172.30.112.48:3000', 'http://172.30.98.6:3000', 'http://172.30.112.48:8001']; // 필요시 여기에 실제 프로덕션 프론트엔드 도메인을 추가하세요.
-  const corsOptions = {
-    origin: function (origin, callback) {
-      logger.info(`[CORS] Request from origin: ${origin}`); // 수신된 origin 로깅
-      // !origin은 Postman 같은 툴이나 서버 간 요청을 허용하기 위함입니다.
-      if (whitelist.indexOf(origin) !== -1 || !origin) {
-        callback(null, true);
-      } else {
-        logger.error(`[CORS] Blocked origin: ${origin}`); // 차단된 origin 로깅
-        callback(new Error('Not allowed by CORS'));
-      }
-    },
-    credentials: true
-  };
-  app.use(cors(corsOptions));
+  // const whitelist = ['http://localhost:3000', 'http://172.30.112.48:3000', 'http://172.30.98.6:3000','http://192.168.56.1:3000','http://172.30.98.6:3000'];
+  // const corsOptions = {
+  //   origin: function (origin, callback) {
+  //     if (whitelist.indexOf(origin) !== -1 || !origin) {
+  //       callback(null, true);
+  //     } else {
+  //       callback(new Error('Not allowed by CORS'));
+  //     }
+  //   },
+  // };
+  // app.use(cors(corsOptions));
+  app.use(cors({
+    origin: true, // 모든 origin 허용
+    credentials: true, // 쿠키 등 자격 증명 허용
+  }));
+  
 
   // 요청 로깅 미들웨어 추가
   app.use((req, res, next) => {
