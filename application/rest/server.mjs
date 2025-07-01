@@ -41,18 +41,12 @@ function setupMiddlewares() {
   app.use(cookieParser()); // cookie-parser 미들웨어 사용
   app.use(passport.initialize());
 
-  const whitelist = ['http://localhost:3000', 'http://172.30.112.48:3000'];
+  const whitelist = ['http://localhost:3000', 'http://172.30.112.48:3000','http://172.30.98.6:3000'];
   const corsOptions = {
     origin: function (origin, callback) {
-      logger.info(`[CORS] Request from origin: ${origin}`);
-      if (whitelist.indexOf(origin) !== -1 || !origin) {
-        callback(null, true);
-      } else {
-        logger.error(`[CORS] Blocked origin: ${origin}`);
-        callback(new Error('Not allowed by CORS'));
-      }
+      callback(null, true); // 임시로 모든 origin 허용
     },
-    credentials: true,
+    credentials: true
   };
   app.use(cors(corsOptions));
 

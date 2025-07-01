@@ -69,12 +69,15 @@ class AuthController {
         authServiceResult.email,
         authServiceResult.role
       );
+      const isProduction = process.env.NODE_ENV === 'production';
+
       // JWT를 HTTP-only 쿠키로 설정
       res.cookie('token', authServiceResult.token, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax',
-        maxAge: 3600 * 1000
+        secure: isProduction,
+        sameSite: isProduction ? 'None' : 'Lax',
+        maxAge: 3600 * 1000,
+        path: '/'
       });
 
       const responseDto = new LoginSuccessResponseDto(
@@ -100,12 +103,14 @@ class AuthController {
         email: req.user.email,
       };
 
+      const isProduction = process.env.NODE_ENV === 'production';
       const token = jwt.sign(payload, jwtConfig.secret, { expiresIn: jwtConfig.expiresIn });
       res.cookie('token', token, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax',
-        maxAge: 3600 * 1000
+        secure: isProduction,
+        sameSite: isProduction ? 'None' : 'Lax',
+        maxAge: 3600 * 1000,
+        path: '/'
       });
 
       res.redirect(`${FRONTEND_URL}/auth/social-callback`); // 토큰 없이 리다이렉트
