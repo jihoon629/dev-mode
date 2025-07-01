@@ -24,7 +24,7 @@ class AuthController {
       if (!req.user) {
         return res.status(401).json({ message: 'Not authenticated' });
       }
-      res.status(200).json({ id: req.user.id, username: req.user.username, email: req.user.email });
+      res.status(200).json({ id: req.user.id, username: req.user.username, email: req.user.email,role: req.user.role });
     } catch (error) {
       next(error);
     }
@@ -66,13 +66,14 @@ class AuthController {
       const userResponse = new UserResponseDto(
         authServiceResult.id,
         authServiceResult.username,
-        authServiceResult.email
+        authServiceResult.email,
+        authServiceResult.role
       );
       // JWT를 HTTP-only 쿠키로 설정
       res.cookie('token', authServiceResult.token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'Lax',
+        sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax',
         maxAge: 3600 * 1000
       });
 
@@ -103,7 +104,7 @@ class AuthController {
       res.cookie('token', token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'Lax',
+        sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax',
         maxAge: 3600 * 1000
       });
 

@@ -96,6 +96,7 @@ class AuthService {
                 id: user.id,
                 email: user.email,
                 username: user.username,
+                role: user.role,
             };
             const token = jwt.sign(tokenPayload, jwtConfig.secret, { expiresIn: jwtConfig.expiresIn });
             logger.info(`[Auth서비스-로그인] 사용자 [${email}] JWT 토큰 발급 완료.`);
@@ -106,7 +107,8 @@ class AuthService {
                 username: user.username,
                 email: user.email,
                 token,
-                fabricMessage: fabricMessageForResponse
+                fabricMessage: fabricMessageForResponse,
+                role: user.role,
             };
         } catch (error) {
             logger.error(`[Auth서비스-로그인] ${email} 사용자 로그인 중 오류 발생: ${error.message}`, { email, stack: error.stack });

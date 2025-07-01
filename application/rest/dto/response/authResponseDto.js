@@ -6,10 +6,11 @@
   
   // 공통 사용자 정보 응답 DTO (비밀번호 등 민감 정보 제외)
   class UserResponseDto {
-    constructor(id, username, email) {
+    constructor(id, username, email,role) {
       this.id = id;
       this.username = username;
       this.email = email;
+      this.role = role;
       // 필요에 따라 created_at 등 추가 정보 포함 가능
     }
   }

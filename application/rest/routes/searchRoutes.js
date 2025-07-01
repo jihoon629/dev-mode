@@ -3,6 +3,8 @@ const express = require('express');
 const searchController = require('../controller/searchController');
 const router = express.Router();
 
+// 현재 안씀
+
 // 일반적인 유사성 검색
 // GET /api/search/similarity?query=검색어&field=필드명&limit=10
 router.get('/similarity', searchController.similaritySearch);

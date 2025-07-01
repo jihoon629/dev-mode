@@ -40,10 +40,21 @@ function setupMiddlewares() {
   app.use(express.urlencoded({ extended: true }));
   app.use(cookieParser()); // cookie-parser 미들웨어 사용
   app.use(passport.initialize());
-  app.use(cors({
-    origin: 'http://localhost:3000',
-    credentials: true
-  }));
+
+  const whitelist = ['http://localhost:3000', 'http://172.30.112.48:3000'];
+  const corsOptions = {
+    origin: function (origin, callback) {
+      logger.info(`[CORS] Request from origin: ${origin}`);
+      if (whitelist.indexOf(origin) !== -1 || !origin) {
+        callback(null, true);
+      } else {
+        logger.error(`[CORS] Blocked origin: ${origin}`);
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
+    credentials: true,
+  };
+  app.use(cors(corsOptions));
 
   // 요청 로깅 미들웨어 추가
   app.use((req, res, next) => {
