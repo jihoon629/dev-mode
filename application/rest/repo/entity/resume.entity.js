@@ -43,6 +43,17 @@ const ResumeEntity = new EntitySchema({
             nullable: true,
             comment: "보유 기술 및 경험 (JSON 형태 또는 콤마 구분)"
         },
+        experience: {
+            type: "int",
+            nullable: true,
+            comment: "경력 (년수)"
+        },
+        phone: {
+            type: "varchar",
+            length: 20,
+            nullable: true,
+            comment: "전화번호"
+        },
         certificate_images: {
             type: "json",
             nullable: true,
