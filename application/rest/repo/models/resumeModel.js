@@ -7,7 +7,7 @@ const resumeRepository = AppDataSource.getRepository(ResumeEntity);
 
 const ResumeModel = {
   async create(userData) {
-    const { userId, jobType, region, selfIntroduction, desiredDailyWage, skills } = userData;
+    const { userId, jobType, region, selfIntroduction, desiredDailyWage, skills, certificateImages } = userData;
     
     try {
       const newResume = resumeRepository.create({
@@ -17,6 +17,7 @@ const ResumeModel = {
         self_introduction: selfIntroduction,
         desired_daily_wage: desiredDailyWage,
         skills: Array.isArray(skills) ? JSON.stringify(skills) : skills,
+        certificate_images: Array.isArray(certificateImages) ? certificateImages : null,
         is_active: true
       });
 
@@ -97,7 +98,7 @@ const ResumeModel = {
 
   async update(id, updateData) {
     try {
-      const { jobType, region, selfIntroduction, desiredDailyWage, skills, isActive } = updateData;
+      const { jobType, region, selfIntroduction, desiredDailyWage, skills, certificateImages, isActive } = updateData;
       
       const updateFields = {};
       if (jobType !== undefined) updateFields.job_type = jobType;
@@ -105,6 +106,7 @@ const ResumeModel = {
       if (selfIntroduction !== undefined) updateFields.self_introduction = selfIntroduction;
       if (desiredDailyWage !== undefined) updateFields.desired_daily_wage = desiredDailyWage;
       if (skills !== undefined) updateFields.skills = Array.isArray(skills) ? JSON.stringify(skills) : skills;
+      if (certificateImages !== undefined) updateFields.certificate_images = Array.isArray(certificateImages) ? certificateImages : null;
       if (isActive !== undefined) updateFields.is_active = isActive;
 
       const result = await resumeRepository.update(id, updateFields);

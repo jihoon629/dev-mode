@@ -43,6 +43,11 @@ const ResumeEntity = new EntitySchema({
             nullable: true,
             comment: "보유 기술 및 경험 (JSON 형태 또는 콤마 구분)"
         },
+        certificate_images: {
+            type: "json",
+            nullable: true,
+            comment: "자격증 사진 URL 배열 (JSON 형태로 저장)"
+        },
         is_active: {
             type: "boolean",
             default: true,
