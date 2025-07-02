@@ -51,6 +51,7 @@ function setupMiddlewares() {
   //     }
   //   },
   // };
+  
   // app.use(cors(corsOptions));
   app.use(cors({
     origin: true, // 모든 origin 허용
