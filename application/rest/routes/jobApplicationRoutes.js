@@ -43,4 +43,20 @@ router.put('/applications/:id/status', jobApplicationController.updateApplicatio
  */
 router.post('/applications/:id/complete', jobApplicationController.completeApplication);
 
+
+
+/**
+ * @route   GET /api/salaries/my
+ * @desc    나의 급여 내역 조회
+ * @access  Private (Worker)
+ */
+router.get('/salaries/my', jobApplicationController.getMySalaries);
+
+/**
+ * @route   POST /api/job-postings/:id/record-payments-for-all
+ * @desc    특정 공고의 모든 완료된 지원서에 급여 일괄 기록
+ * @access  Private (Employer)
+ */
+router.post('/job-postings/:id/record-payments-for-all', jobApplicationController.recordPaymentsForAllWorkers);
+
 module.exports = router;

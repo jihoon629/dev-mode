@@ -2,8 +2,8 @@
 const JobApplicationModel = require('../repo/models/jobApplicationModel');
 const JobPostingModel = require('../repo/models/jobPostingModel');
 const ResumeModel = require('../repo/models/resumeModel');
-const UserModel = require('../repo/models/userModel'); // UserModel 임포트
-const { invokeChaincode } = require('../sdk'); // 리팩토링된 함수 임포트
+const UserModel = require('../repo/models/userModel');
+const { invokeChaincode } = require('../sdk');
 const logger = require('../config/logger');
 
 class JobApplicationService {
@@ -33,6 +33,10 @@ class JobApplicationService {
         return await JobApplicationModel.findByApplicantId(applicantId);
     }
 
+    async getMySalaries(applicantId) {
+        return await JobApplicationModel.findSalariesByApplicantId(applicantId);
+    }
+
     async updateApplicationStatus(applicationId, status, currentUserId) {
         if (status === 'completed') {
             throw new Error("'completed' 상태는 '평가 완료' API를 통해서만 설정할 수 있습니다.");
@@ -53,13 +57,12 @@ class JobApplicationService {
             throw new Error('지원서를 찾을 수 없습니다.');
         }
         if (application.jobPosting.user_id !== currentUserId) {
-            throw new Error('자신이 등록한 공고의 지��만 평가할 수 있습니다.');
+            throw new Error('자신이 등록한 공고의 지원만 평가할 수 있습니다.');
         }
         if (application.status !== 'approved') {
             throw new Error('승인된 지원만 평가 완료할 수 있습니다.');
         }
 
-        // 체인코드 호출을 위한 identity(사용자 이메일) 조회
         const employer = await UserModel.findById(currentUserId);
         if (!employer || !employer.email) {
             throw new Error('경력 기록을 위한 사용자 정보(identity)를 찾을 수 없습니다.');
@@ -68,7 +71,6 @@ class JobApplicationService {
         const { jobPosting, applicant } = application;
         const workPeriod = `${jobPosting.work_start_date} ~ ${jobPosting.work_end_date}`;
         
-        // 리팩토링된 체인코드 함수 호출
         await invokeChaincode(false, employer.email, 'RecordWorkExperience', [
             jobPosting.id.toString(),
             jobPosting.title,
@@ -77,10 +79,92 @@ class JobApplicationService {
             workPeriod
         ]);
 
-        // DB 상태를 'completed'로 변경
         return await JobApplicationModel.updateStatus(applicationId, 'completed');
+    }
+
+    
+    async recordPayment(applicationId, paymentDate, currentUserId) {
+        const application = await JobApplicationModel.findById(applicationId);
+        if (!application) {
+            throw new Error('지원서를 찾을 수 없습니다.');
+        }
+        if (application.jobPosting.user_id !== currentUserId) {
+            throw new Error('자신이 등록한 공고의 지원 건에 대해서만 급여를 기록할 수 있습니다.');
+        }
+        if (application.status !== 'completed') {
+            throw new Error('평가가 완료된 지원 건에 대해서만 급여를 기록할 수 있습니다.');
+        }
+
+        const { jobPosting } = application;
+        if (!jobPosting.work_start_date || !jobPosting.work_end_date || !jobPosting.daily_wage) {
+            throw new Error('공고에 근무 기간 또는 일급 정보가 없습니다.');
+        }
+
+        // 근무일수 계산 (종료일 - 시작일 + 1)
+        const startDate = new Date(jobPosting.work_start_date);
+        const endDate = new Date(jobPosting.work_end_date);
+        const workDays = (endDate.getTime() - startDate.getTime()) / (1000 * 3600 * 24) + 1;
+
+        if (workDays <= 0) {
+            throw new Error('근무 기간이 올바르지 않습니다.');
+        }
+
+        // 급여액 자동 계산
+        const dailyWage = parseFloat(jobPosting.daily_wage);
+        const paymentAmount = dailyWage * workDays;
+
+        const paymentData = { paymentDate, paymentAmount };
+
+        return await JobApplicationModel.updatePayment(applicationId, paymentData);
+    }
+
+    async recordPaymentsForAllApplications(jobPostingId, currentUserId) {
+        const jobPosting = await JobPostingModel.findById(jobPostingId);
+        if (!jobPosting) {
+            throw new Error('공고를 찾을 수 없습니다.');
+        }
+        if (jobPosting.user_id !== currentUserId) {
+            throw new Error('자신이 등록한 공고의 지원 건에 대해서만 급여를 일괄 기록할 수 있습니다.');
+        }
+
+        const applications = await JobApplicationModel.findByJobPostingId(jobPostingId);
+        const completedApplications = applications.filter(app => app.status === 'completed');
+
+        let successCount = 0;
+        let failCount = 0;
+        const failedApplications = [];
+
+        for (const application of completedApplications) {
+            try {
+                // recordPayment 로직 재사용
+                if (!jobPosting.work_start_date || !jobPosting.work_end_date || !jobPosting.daily_wage) {
+                    throw new Error('공고에 근무 기간 또는 일급 정보가 없습니다.');
+                }
+
+                const startDate = new Date(jobPosting.work_start_date);
+                const endDate = new Date(jobPosting.work_end_date);
+                const workDays = (endDate.getTime() - startDate.getTime()) / (1000 * 3600 * 24) + 1;
+
+                if (workDays <= 0) {
+                    throw new Error('근무 기간이 올바르지 않습니다.');
+                }
+
+                const dailyWage = parseFloat(jobPosting.daily_wage);
+                const paymentAmount = dailyWage * workDays;
+
+                const paymentData = { paymentDate: new Date().toISOString().split('T')[0], paymentAmount }; // 현재 날짜로 지급일 설정
+
+                await JobApplicationModel.updatePayment(application.id, paymentData);
+                successCount++;
+            } catch (error) {
+                logger.error(`[JobApplicationService-recordPaymentsForAllApplications] 지원 ID ${application.id} 급여 기록 실패: ${error.message}`);
+                failCount++;
+                failedApplications.push({ applicationId: application.id, error: error.message });
+            }
+        }
+
+        return { successCount, failCount, failedApplications };
     }
 }
 
-module.exports = new JobApplicationService();
-
+module.exports = JobApplicationService;

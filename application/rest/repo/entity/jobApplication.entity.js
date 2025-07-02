@@ -29,6 +29,16 @@ const JobApplicationEntity = new EntitySchema({
             nullable: false,
             comment: "지원 상태 (pending: 대기중, approved: 승인, rejected: 거절, completed: 평가완료)",
         },
+        payment_date: {
+            type: "date",
+            nullable: true,
+            comment: "급여 지급일",
+        },
+        payment_amount: {
+            type: "int",
+            nullable: true,
+            comment: "급여액",
+        },
         created_at: {
             type: "timestamp",
             createDate: true,

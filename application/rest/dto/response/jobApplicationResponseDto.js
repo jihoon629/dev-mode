@@ -7,6 +7,8 @@ class JobApplicationResponseDto {
         this.applicantId = application.applicant_id;
         this.resumeId = application.resume_id;
         this.status = application.status;
+        this.paymentDate = application.payment_date; // 추가
+        this.paymentAmount = application.payment_amount; // 추가
         this.createdAt = application.created_at;
         this.updatedAt = application.updated_at;
 
