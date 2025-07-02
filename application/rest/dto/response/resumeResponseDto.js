@@ -11,7 +11,7 @@ class ResumeResponseDto {
         this.desiredDailyWage = resume.desired_daily_wage;
         this.skills = resume.skills;
         this.certificateImages = resume.certificate_images;
-        this.experience = resume.experience;
+        this.history = resume.history;
         this.phone = resume.phone;
         this.createdAt = resume.created_at;
         this.updatedAt = resume.updated_at;

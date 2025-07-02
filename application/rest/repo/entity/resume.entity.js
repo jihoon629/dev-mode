@@ -43,7 +43,7 @@ const ResumeEntity = new EntitySchema({
             nullable: true,
             comment: "보유 기술 및 경험 (JSON 형태 또는 콤마 구분)"
         },
-        experience: {
+        history: {
             type: "int",
             nullable: true,
             comment: "경력 (년수)"
