@@ -17,6 +17,16 @@ class AuthController {
     this.login = this.login.bind(this);
     this.handleGoogleCallback = this.handleGoogleCallback.bind(this);
     this.getMe = this.getMe.bind(this);
+    this.logout = this.logout.bind(this); // logout 바인딩 추가
+  }
+
+  async logout(req, res, next) {
+    try {
+      res.clearCookie('token', { path: '/' }); // 토큰 쿠키 삭제
+      res.status(200).json({ message: '로그아웃되었습니다.' });
+    } catch (error) {
+      next(error);
+    }
   }
 
   async getMe(req, res, next) {

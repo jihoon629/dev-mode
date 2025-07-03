@@ -30,4 +30,7 @@ router.get('/google/callback',
 // 현재 로그인된 사용자 정보 가져오기
 router.get('/me', passport.authenticate('jwt', { session: false }), authControllerInstance.getMe);
 
+// 로그아웃 라우트
+router.post('/logout', authControllerInstance.logout);
+
 module.exports = router;
