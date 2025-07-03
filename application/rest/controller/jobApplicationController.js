@@ -218,20 +218,24 @@ class JobApplicationController {
     async recordPaymentsForAllWorkers(req, res, next) {
         try {
             const jobPostingId = parseInt(req.params.id, 10);
+            const { paymentDate } = req.body; // paymentDate 추가
             const currentUserId = req.user.id;
 
             if (!currentUserId) {
                 return res.status(401).json({ message: '로그인이 필요합니다.' });
             }
+            if (!paymentDate) { // paymentDate 유효성 검사 추가
+                return res.status(400).json({ message: '급여 지급일을 입력해야 합니다.' });
+            }
 
-            const result = await jobApplicationService.recordPaymentsForAllApplications(jobPostingId, currentUserId);
+            const result = await jobApplicationService.recordPaymentsForAllApplications(jobPostingId, paymentDate, currentUserId); // paymentDate 전달
             res.status(200).json({
                 status: 'success',
                 message: `총 ${result.successCount}건의 급여가 성공적으로 기록되었고, ${result.failCount}건은 실패했습니다.`,
                 data: result.failedApplications,
             });
         } catch (error) {
-            logger.error(`[JobApplicationController-recordPaymentsForAllWorkers] 오류: ${error.message}`, { params: req.params, user: req.user, stack: error.stack });
+            logger.error(`[JobApplicationController-recordPaymentsForAllWorkers] 오류: ${error.message}`, { params: req.params, body: req.body, user: req.user, stack: error.stack });
             next(error);
         }
     }

@@ -118,7 +118,7 @@ class JobApplicationService {
         return await JobApplicationModel.updatePayment(applicationId, paymentData);
     }
 
-    async recordPaymentsForAllApplications(jobPostingId, currentUserId) {
+    async recordPaymentsForAllApplications(jobPostingId, paymentDate, currentUserId) {
         const jobPosting = await JobPostingModel.findById(jobPostingId);
         if (!jobPosting) {
             throw new Error('공고를 찾을 수 없습니다.');
@@ -152,7 +152,7 @@ class JobApplicationService {
                 const dailyWage = parseFloat(jobPosting.daily_wage);
                 const paymentAmount = dailyWage * workDays;
 
-                const paymentData = { paymentDate: new Date().toISOString().split('T')[0], paymentAmount }; // 현재 날짜로 지급일 설정
+                const paymentData = { paymentDate, paymentAmount }; // paymentDate 사용
 
                 await JobApplicationModel.updatePayment(application.id, paymentData);
                 successCount++;
