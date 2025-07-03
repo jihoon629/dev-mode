@@ -17,7 +17,7 @@ const ResumeModel = {
         self_introduction: selfIntroduction,
         desired_daily_wage: desiredDailyWage,
         skills: Array.isArray(skills) ? JSON.stringify(skills) : skills,
-        certificate_images: Array.isArray(certificateImages) ? certificateImages : null,
+        certificate_images: certificateImages || null,
         history: history,
         phone: phone,
         is_active: true
@@ -108,7 +108,7 @@ const ResumeModel = {
       if (selfIntroduction !== undefined) updateFields.self_introduction = selfIntroduction;
       if (desiredDailyWage !== undefined) updateFields.desired_daily_wage = desiredDailyWage;
       if (skills !== undefined) updateFields.skills = Array.isArray(skills) ? JSON.stringify(skills) : skills;
-      if (certificateImages !== undefined) updateFields.certificate_images = Array.isArray(certificateImages) ? certificateImages : null;
+      if (certificateImages !== undefined) updateFields.certificate_images = certificateImages || null;
       if (history !== undefined) updateFields.history = history;
       if (phone !== undefined) updateFields.phone = phone;
       if (isActive !== undefined) updateFields.is_active = isActive;
