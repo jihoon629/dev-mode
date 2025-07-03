@@ -4,6 +4,7 @@
 class ResumeResponseDto {
     constructor(resume) {
         this.id = resume.id;
+        this.name = resume.name;
         this.userId = resume.user_id;
         this.jobType = resume.job_type;
         this.region = resume.region;

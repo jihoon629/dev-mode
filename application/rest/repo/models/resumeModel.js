@@ -7,11 +7,12 @@ const resumeRepository = AppDataSource.getRepository(ResumeEntity);
 
 const ResumeModel = {
   async create(userData) {
-    const { userId, jobType, region, selfIntroduction, desiredDailyWage, skills, certificateImages, history, phone } = userData;
+    const { userId, name, jobType, region, selfIntroduction, desiredDailyWage, skills, certificateImages, history, phone } = userData;
     
     try {
       const newResume = resumeRepository.create({
         user_id: userId,
+        name: name,
         job_type: jobType,
         region: region,
         self_introduction: selfIntroduction,
@@ -100,9 +101,10 @@ const ResumeModel = {
 
   async update(id, updateData) {
     try {
-      const { jobType, region, selfIntroduction, desiredDailyWage, skills, certificateImages, history, phone, isActive } = updateData;
+      const { name, jobType, region, selfIntroduction, desiredDailyWage, skills, certificateImages, history, phone, isActive } = updateData;
       
       const updateFields = {};
+      if (name !== undefined) updateFields.name = name;
       if (jobType !== undefined) updateFields.job_type = jobType;
       if (region !== undefined) updateFields.region = region;
       if (selfIntroduction !== undefined) updateFields.self_introduction = selfIntroduction;

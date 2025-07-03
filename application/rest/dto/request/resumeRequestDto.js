@@ -2,8 +2,9 @@
 // application/rest/dto/request/resumeRequestDto.js
 
 class CreateResumeRequestDto {
-    constructor(userId, jobType, region, selfIntroduction, desiredDailyWage, skills, certificateImages, history, phone) {
+    constructor(userId, name, jobType, region, selfIntroduction, desiredDailyWage, skills, certificateImages, history, phone) {
         this.userId = userId;
+        this.name = name;
         this.jobType = jobType;
         this.region = region;
         this.selfIntroduction = selfIntroduction;
@@ -16,7 +17,8 @@ class CreateResumeRequestDto {
 }
 
 class UpdateResumeRequestDto {
-    constructor(jobType, region, selfIntroduction, desiredDailyWage, skills, certificateImages, history, phone) {
+    constructor(name, jobType, region, selfIntroduction, desiredDailyWage, skills, certificateImages, history, phone) {
+        this.name = name;
         this.jobType = jobType;
         this.region = region;
         this.selfIntroduction = selfIntroduction;
