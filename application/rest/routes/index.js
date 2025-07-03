@@ -24,6 +24,10 @@ router.use('/job-postings', jobPostingRoutes);
 const userRoutes = require('./userRoutes');
 router.use('/users', userRoutes);
 
+// '/upload' 경로로 들어오는 요청은 uploadRoutes에서 처리
+const uploadRoutes = require('./uploadRoutes');
+router.use('/upload', uploadRoutes);
+
 // '/applications' 등 지원 관련 경로로 들어오는 요청은 jobApplicationRoutes에서 처리
 const jobApplicationRoutes = require('./jobApplicationRoutes');
 router.use('/', jobApplicationRoutes); // '/job-postings/:id/apply' 같은 경로를 처리하기 위해 기본 경로에 연결

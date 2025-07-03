@@ -117,6 +117,9 @@ function setupMcpRoutes() {
 function setupStaticRoutes() {
   // 정적 파일 제공
   app.use(express.static(path.join(__dirname, '../client')));
+  
+  // 업로드된 파일 정적 서빙
+  app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
   // SPA 라우팅 처리
   app.use((req, res, next) => {
