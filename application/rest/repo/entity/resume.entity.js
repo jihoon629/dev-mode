@@ -14,12 +14,6 @@ const ResumeEntity = new EntitySchema({
             type: "int",
             nullable: false,
         },
-        name: {
-            type: "varchar",
-            length: 50,
-            nullable: false,
-            comment: "이름"
-        },
         job_type: {
             type: "varchar",
             length: 100,

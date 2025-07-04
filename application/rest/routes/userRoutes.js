@@ -11,4 +11,11 @@ const router = express.Router();
  */
 router.get('/:id/experience', userController.getUserExperience);
 
+/**
+ * @route   PUT /api/users/:id
+ * @desc    사용자 정보 업데이트
+ * @access  Private
+ */
+router.put('/:id', userController.updateUser);
+
 module.exports = router;

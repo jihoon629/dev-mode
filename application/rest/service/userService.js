@@ -34,6 +34,25 @@ class UserService {
             throw error;
         }
     }
+
+    /**
+     * 사용자 정보를 업데이트합니다.
+     * @param {number} userId - 업데이트할 사용자의 ID
+     * @param {Object} updateData - 업데이트할 데이터
+     * @returns {Promise<Object>} 업데이트된 사용자 정보
+     */
+    async updateUser(userId, updateData) {
+        logger.info(`[UserService] Updating user with ID: ${userId}`);
+        
+        try {
+            const updatedUser = await UserModel.update(userId, updateData);
+            logger.info(`[UserService] User updated successfully. ID: ${userId}`);
+            return updatedUser;
+        } catch (error) {
+            logger.error(`[UserService] Failed to update user ${userId}: ${error.message}`, { stack: error.stack });
+            throw error;
+        }
+    }
 }
 
 module.exports = new UserService();

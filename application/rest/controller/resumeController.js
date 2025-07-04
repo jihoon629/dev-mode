@@ -54,7 +54,7 @@ class ResumeController {
     async createResume(req, res, next) {
         try {
             validateCreateResume(req.body);
-            const createDto = new CreateResumeRequestDto(req.body.userId, req.body.name, req.body.jobType, req.body.region, req.body.selfIntroduction, req.body.desiredDailyWage, req.body.skills, req.body.certificateImages, req.body.history, req.body.phone);
+            const createDto = new CreateResumeRequestDto(req.body.userId, req.body.username, req.body.jobType, req.body.region, req.body.selfIntroduction, req.body.desiredDailyWage, req.body.skills, req.body.certificateImages, req.body.history, req.body.phone);
             const newResume = await resumeService.createResume(createDto);
             const responseDto = new ResumeResponseDto(newResume);
 
@@ -117,7 +117,7 @@ class ResumeController {
     async updateResume(req, res, next) {
         try {
             validateIdParam(req.params);
-            const updateDto = new UpdateResumeRequestDto(req.body.name, req.body.jobType, req.body.region, req.body.selfIntroduction, req.body.desiredDailyWage, req.body.skills, req.body.certificateImages, req.body.history, req.body.phone);
+            const updateDto = new UpdateResumeRequestDto(req.body.username, req.body.jobType, req.body.region, req.body.selfIntroduction, req.body.desiredDailyWage, req.body.skills, req.body.certificateImages, req.body.history, req.body.phone);
             const updatedResume = await resumeService.updateResume(parseInt(req.params.id), updateDto);
             const responseDto = new ResumeResponseDto(updatedResume);
 
