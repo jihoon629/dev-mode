@@ -1,4 +1,3 @@
-// application/rest/repo/entity/jobPosting.entity.js
 const { EntitySchema } = require("typeorm");
 
 const JobPostingEntity = new EntitySchema({
@@ -31,6 +30,12 @@ const JobPostingEntity = new EntitySchema({
             length: 100,
             nullable: false,
             comment: "근무 지역"
+        },
+        location: {
+            type: "point",
+            nullable: true,
+            spatial: true,
+            comment: "위치 (위도, 경도)"
         },
         site_description: {
             type: "text",

@@ -25,6 +25,7 @@
     "multer": "^2.0.1",
     "mysql2": "^3.14.1",
     "node-fetch": "^2.7.0",
+    "node-geocoder": "^4.4.1",
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
     "passport-jwt": "^4.0.1",

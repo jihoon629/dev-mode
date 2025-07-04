@@ -18,6 +18,10 @@ router.get('/search/general', jobPostingController.searchJobPostings);
 // GET /api/job-postings/search/similarity
 router.get('/search/similarity', jobPostingController.searchJobPostingsBySimilarity);
 
+// 공고 검색 (거리)
+// GET /api/job-postings/search/distance
+router.get('/search/distance', jobPostingController.searchJobPostingsByDistance);
+
 // 특정 사용자의 공고 목록 조회
 // GET /api/job-postings/user/:userId
 router.get('/user/:userId', jobPostingController.getJobPostingsByUser);

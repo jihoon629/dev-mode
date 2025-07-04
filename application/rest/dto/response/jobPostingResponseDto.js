@@ -18,6 +18,8 @@ class JobPostingResponseDto {
         this.viewCount = posting.view_count;
         this.createdAt = posting.created_at;
         this.updatedAt = posting.updated_at;
+        this.distance = posting.distance; // 거리 필드 추가
+        this.location = posting.location; // location 필드 추가
         
         if (posting.user) {
             this.user = {

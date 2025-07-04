@@ -109,6 +109,21 @@ class JobPostingService {
     }
     return postings;
   }
+
+  async searchJobPostingsByDistance(lat, lon, dist, currentUserId) {
+    const postings = await JobPostingModel.findByDistance(lat, lon, dist);
+    if (currentUserId && postings.length > 0) {
+        const favoritePostIds = (await FavoriteModel.findByUserId(currentUserId)).map(fav => fav.job_posting_id);
+        postings.forEach(p => {
+            p.isFavorited = favoritePostIds.includes(p.id);
+        });
+    } else {
+        postings.forEach(p => {
+            p.isFavorited = false;
+        });
+    }
+    return postings;
+  }
 }
 
 module.exports = new JobPostingService();

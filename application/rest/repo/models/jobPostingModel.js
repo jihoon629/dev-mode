@@ -1,4 +1,4 @@
-// application/rest/repo/models/jobPostingModel.js
+const geocodingService = require('../../service/geocodingService');
 const logger = require('../../config/logger');
 const { AppDataSource } = require('../../config/dbConfig');
 const { JobPostingEntity } = require('../entity/jobPosting.entity');
@@ -13,11 +13,14 @@ const JobPostingModel = {
     } = postingData;
     
     try {
+      const coords = await geocodingService.getCoordinates(region);
+
       const newJobPosting = jobPostingRepository.create({
         user_id: userId,
         title: title,
         job_type: jobType,
         region: region,
+        location: coords ? `POINT(${coords.longitude} ${coords.latitude})` : null,
         site_description: siteDescription,
         daily_wage: dailyWage,
         required_skills: Array.isArray(requiredSkills) ? JSON.stringify(requiredSkills) : requiredSkills,
@@ -122,7 +125,13 @@ const JobPostingModel = {
       const updateFields = {};
       if (title !== undefined) updateFields.title = title;
       if (jobType !== undefined) updateFields.job_type = jobType;
-      if (region !== undefined) updateFields.region = region;
+      if (region !== undefined) {
+        updateFields.region = region;
+        const coords = await geocodingService.getCoordinates(region);
+        if (coords) {
+          updateFields.location = `POINT(${coords.longitude} ${coords.latitude})`;
+        }
+      }
       if (siteDescription !== undefined) updateFields.site_description = siteDescription;
       if (dailyWage !== undefined) updateFields.daily_wage = dailyWage;
       if (requiredSkills !== undefined) updateFields.required_skills = Array.isArray(requiredSkills) ? JSON.stringify(requiredSkills) : requiredSkills;
@@ -207,6 +216,53 @@ const JobPostingModel = {
       return postings;
     } catch (error) {
       logger.error(`[JobPostingModel-findAllActive] 오류: ${error.message}`, { stack: error.stack });
+      throw error;
+    }
+  },
+
+  async findByDistance(latitude, longitude, distance, limit = 20, offset = 0) {
+    try {
+      const origin = { type: 'Point', coordinates: [longitude, latitude] };
+      const query = jobPostingRepository.createQueryBuilder("posting")
+        .leftJoinAndSelect('posting.user', 'user')
+        .addSelect(`ST_Distance_Sphere(posting.location, ST_GeomFromText(:origin, 4326)) / 1000`, "distance")
+        .addSelect(`ST_AsText(posting.location)`, "locationText") // location을 텍스트 형태로 가져옴
+        .where('posting.is_active = :isActive', { isActive: true })
+        .andWhere('user.role = :role', { role: 'employer' })
+        .andWhere(`ST_Distance_Sphere(posting.location, ST_GeomFromText(:origin, 4326)) < :dist`)
+        .setParameters({
+          origin: `POINT(${longitude} ${latitude})`,
+          dist: distance * 1000 // km to meters
+        })
+        .orderBy("distance", "ASC")
+        .limit(limit)
+        .offset(offset)
+        .getRawAndEntities();
+
+      const results = await query;
+      return results.entities.map((entity, index) => {
+        const locationText = results.raw[index].locationText; // 텍스트 형태의 location
+        let parsedLocation = null;
+
+        if (locationText) {
+          // POINT(경도 위도) 형태의 문자열을 파싱
+          const match = locationText.match(/POINT\((\S+) (\S+)\)/);
+          if (match && match.length === 3) {
+            const lon = parseFloat(match[1]);
+            const lat = parseFloat(match[2]);
+            parsedLocation = { type: 'Point', coordinates: [lon, lat] };
+          }
+        }
+
+        return {
+          ...entity,
+          distance: results.raw[index].distance,
+          location: parsedLocation
+        };
+      });
+
+    } catch (error) {
+      logger.error(`[JobPostingModel-findByDistance] 오류: ${error.message}`, { latitude, longitude, distance, stack: error.stack });
       throw error;
     }
   }

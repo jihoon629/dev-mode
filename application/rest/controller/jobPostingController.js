@@ -22,6 +22,7 @@ class JobPostingController {
         this.deleteJobPosting = this.deleteJobPosting.bind(this);
         this.searchJobPostings = this.searchJobPostings.bind(this);
         this.searchJobPostingsBySimilarity = this.searchJobPostingsBySimilarity.bind(this);
+        this.searchJobPostingsByDistance = this.searchJobPostingsByDistance.bind(this);
     }
 
     async getAllJobPostings(req, res, next) {
@@ -182,6 +183,28 @@ class JobPostingController {
 
         } catch (error) {
             logger.error(`[JobPostingController-searchJobPostingsBySimilarity] 오류: ${error.message}`,
+              { query: req.query, stack: error.stack });
+            next(error);
+        }
+    }
+
+    async searchJobPostingsByDistance(req, res, next) {
+        try {
+            const { lat, lon, dist } = req.query;
+            const currentUserId = req.user?.id;
+            const results = await jobPostingService.searchJobPostingsByDistance(lat, lon, dist, currentUserId);
+            const responseDto = new JobPostingListResponseDto(results);
+
+            res.json({
+                status: 'success',
+                data: responseDto,
+                meta: {
+                    searchQuery: req.query,
+                }
+            });
+
+        } catch (error) {
+            logger.error(`[JobPostingController-searchJobPostingsByDistance] 오류: ${error.message}`,
               { query: req.query, stack: error.stack });
             next(error);
         }
