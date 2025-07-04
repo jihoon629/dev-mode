@@ -1,15 +1,15 @@
 // application/rest/routes/index.js
 const express = require('express');
 const router = express.Router();
-const authRoutes = require('./authRoutes');
-const searchRoutes = require('./searchRoutes');
 const llmService = require('../service/llmService');
 const logger = require('../config/logger');
 
 // '/auth' 경로로 들어오는 요청은 authRoutes에서 처리
+const authRoutes = require('./authRoutes');
 router.use('/auth', authRoutes);
 
 // '/search' 경로로 들어오는 요청은 searchRoutes에서 처리
+const searchRoutes = require('./searchRoutes');
 router.use('/search', searchRoutes);
 
 // '/resumes' 경로로 들어오는 요청은 resumeRoutes에서 처리
@@ -30,7 +30,11 @@ router.use('/upload', uploadRoutes);
 
 // '/applications' 등 지원 관련 경로로 들어오는 요청은 jobApplicationRoutes에서 처리
 const jobApplicationRoutes = require('./jobApplicationRoutes');
-router.use('/', jobApplicationRoutes); // '/job-postings/:id/apply' 같은 경로를 처리하기 위해 기본 경로에 연결
+router.use('/', jobApplicationRoutes); // 최상위 경로에 등록하여 /job-postings, /applications, /salaries 경로 모두 처리
+
+const favoriteRoutes = require('./favoriteRoutes');
+router.use('/favorites', favoriteRoutes);
+
 
 router.get('/test-llm', async (req, res, next) => {
     try {
