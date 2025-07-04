@@ -26,7 +26,8 @@ class JobPostingController {
 
     async getAllJobPostings(req, res, next) {
         try {
-            const postings = await jobPostingService.getAllJobPostings();
+            const currentUserId = req.user?.id; // Get user ID if authenticated
+            const postings = await jobPostingService.getAllJobPostings(currentUserId);
             const responseDto = new JobPostingListResponseDto(postings);
 
             res.json({
@@ -82,7 +83,8 @@ class JobPostingController {
     async getJobPostingById(req, res, next) {
         try {
             validateIdParam(req.params);
-            const posting = await jobPostingService.getJobPostingById(parseInt(req.params.id));
+            const currentUserId = req.user?.id; // Get user ID if authenticated
+            const posting = await jobPostingService.getJobPostingById(parseInt(req.params.id), currentUserId);
 
             if (!posting) {
                 return res.status(404).json({
@@ -144,7 +146,8 @@ class JobPostingController {
 
     async searchJobPostings(req, res, next) {
         try {
-            const postings = await jobPostingService.searchJobPostings(req.query);
+            const currentUserId = req.user?.id; // Get user ID if authenticated
+            const postings = await jobPostingService.searchJobPostings(req.query, currentUserId);
             const responseDto = new JobPostingListResponseDto(postings);
 
             res.json({
@@ -165,7 +168,8 @@ class JobPostingController {
     async searchJobPostingsBySimilarity(req, res, next) {
         try {
             validateSearchQuery(req.query);
-            const results = await jobPostingService.searchJobPostingsBySimilarity(req.query);
+            const currentUserId = req.user?.id; // Get user ID if authenticated
+            const results = await jobPostingService.searchJobPostingsBySimilarity(req.query, currentUserId);
             const responseDto = new JobPostingListResponseDto(results);
 
             res.json({

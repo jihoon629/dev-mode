@@ -24,6 +24,7 @@ class JobApplicationResponseDto {
                 id: application.resume.id,
                 jobType: application.resume.job_type,
                 region: application.resume.region,
+                name: application.resume.name, // name 필드 추가
             };
         }
         if (application.jobPosting) {

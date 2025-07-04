@@ -1,6 +1,7 @@
 
 // application/rest/service/jobPostingService.js
 const JobPostingModel = require('../repo/models/jobPostingModel');
+const FavoriteModel = require('../repo/models/favoriteModel');
 const similarityService = require('./similarityService');
 const logger = require('../config/logger');
 
@@ -13,10 +14,15 @@ class JobPostingService {
     return await JobPostingModel.findByUserId(userId);
   }
 
-  async getJobPostingById(id) {
+  async getJobPostingById(id, currentUserId) {
     const posting = await JobPostingModel.findById(id);
     if (posting) {
       await JobPostingModel.incrementViewCount(id);
+      if (currentUserId) {
+        posting.isFavorited = await FavoriteModel.isFavorited(currentUserId, id);
+      } else {
+        posting.isFavorited = false;
+      }
     }
     return posting;
   }
@@ -29,15 +35,28 @@ class JobPostingService {
     return await JobPostingModel.delete(id);
   }
 
-  async searchJobPostings(filters) {
+  async searchJobPostings(filters, currentUserId) {
+    let postings;
     if (filters.keyword) {
-      return await JobPostingModel.searchByKeyword(filters.keyword, filters.limit);
+      postings = await JobPostingModel.searchByKeyword(filters.keyword, filters.limit);
     } else {
-      return await JobPostingModel.findActivePostings(filters);
+      postings = await JobPostingModel.findActivePostings(filters);
     }
+
+    if (currentUserId && postings.length > 0) {
+        const favoritePostIds = (await FavoriteModel.findByUserId(currentUserId)).map(fav => fav.job_posting_id);
+        postings.forEach(p => {
+            p.isFavorited = favoritePostIds.includes(p.id);
+        });
+    } else {
+        postings.forEach(p => {
+            p.isFavorited = false;
+        });
+    }
+    return postings;
   }
 
-  async searchJobPostingsBySimilarity(searchParams) {
+  async searchJobPostingsBySimilarity(searchParams, currentUserId) {
     const { query, field, limit, minSimilarity, region, jobType, minWage, maxWage } = searchParams;
 
     const filters = {};
@@ -58,15 +77,37 @@ class JobPostingService {
       field
     );
 
-    const filteredResults = similarityResults.filter(
+    let filteredResults = similarityResults.filter(
       result => result.similarity >= parseInt(minSimilarity)
     );
+
+    if (currentUserId && filteredResults.length > 0) {
+        const favoritePostIds = (await FavoriteModel.findByUserId(currentUserId)).map(fav => fav.job_posting_id);
+        filteredResults.forEach(p => {
+            p.isFavorited = favoritePostIds.includes(p.id);
+        });
+    } else {
+        filteredResults.forEach(p => {
+            p.isFavorited = false;
+        });
+    }
 
     return filteredResults.slice(0, parseInt(limit));
   }
 
-  async getAllJobPostings() {
-    return await JobPostingModel.findAllActive();
+  async getAllJobPostings(currentUserId) {
+    const postings = await JobPostingModel.findAllActive();
+    if (currentUserId && postings.length > 0) {
+        const favoritePostIds = (await FavoriteModel.findByUserId(currentUserId)).map(fav => fav.job_posting_id);
+        postings.forEach(p => {
+            p.isFavorited = favoritePostIds.includes(p.id);
+        });
+    } else {
+        postings.forEach(p => {
+            p.isFavorited = false;
+        });
+    }
+    return postings;
   }
 }
 
