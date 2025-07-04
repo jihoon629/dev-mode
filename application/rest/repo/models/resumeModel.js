@@ -2,17 +2,23 @@
 const logger = require('../../config/logger');
 const { AppDataSource } = require('../../config/dbConfig');
 const { ResumeEntity } = require('../entity/resume.entity');
+const { UserEntity } = require('../entity/user.entity');
 
 const resumeRepository = AppDataSource.getRepository(ResumeEntity);
+const userRepository = AppDataSource.getRepository(UserEntity);
 
 const ResumeModel = {
   async create(userData) {
-    const { userId, name, jobType, region, selfIntroduction, desiredDailyWage, skills, certificateImages, history, phone } = userData;
+    const { userId, username, jobType, region, selfIntroduction, desiredDailyWage, skills, certificateImages, history, phone } = userData;
     
     try {
+      // username이 제공된 경우 사용자 정보 업데이트
+      if (username !== undefined) {
+        await userRepository.update(userId, { username });
+      }
+
       const newResume = resumeRepository.create({
         user_id: userId,
-        name: name,
         job_type: jobType,
         region: region,
         self_introduction: selfIntroduction,
@@ -101,10 +107,20 @@ const ResumeModel = {
 
   async update(id, updateData) {
     try {
-      const { name, jobType, region, selfIntroduction, desiredDailyWage, skills, certificateImages, history, phone, isActive } = updateData;
+      const { username, jobType, region, selfIntroduction, desiredDailyWage, skills, certificateImages, history, phone, isActive } = updateData;
       
+      // 먼저 이력서 정보를 가져와서 user_id를 확인
+      const currentResume = await this.findById(id);
+      if (!currentResume) {
+        throw new Error('이력서를 찾을 수 없습니다.');
+      }
+
+      // username이 제공된 경우 사용자 정보 업데이트
+      if (username !== undefined) {
+        await userRepository.update(currentResume.user_id, { username });
+      }
+
       const updateFields = {};
-      if (name !== undefined) updateFields.name = name;
       if (jobType !== undefined) updateFields.job_type = jobType;
       if (region !== undefined) updateFields.region = region;
       if (selfIntroduction !== undefined) updateFields.self_introduction = selfIntroduction;

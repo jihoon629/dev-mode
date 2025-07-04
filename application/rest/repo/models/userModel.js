@@ -152,6 +152,51 @@ const UserModel = { // 객체 이름을 UserModel 등으로 변경하여 구분 
       }
       throw error;
     }
+  },
+
+  async update(id, updateData) {
+    try {
+      const user = await this.findById(id);
+      if (!user) {
+        throw new Error('사용자를 찾을 수 없습니다.');
+      }
+
+      const updateFields = {};
+      if (updateData.username !== undefined) updateFields.username = updateData.username;
+      if (updateData.email !== undefined) updateFields.email = updateData.email;
+      if (updateData.role !== undefined) updateFields.role = updateData.role;
+      
+      // 비밀번호 업데이트 시 해시 처리
+      if (updateData.password !== undefined) {
+        if (updateData.password) {
+          const salt = await bcrypt.genSalt(10);
+          updateFields.password = await bcrypt.hash(updateData.password, salt);
+        } else {
+          updateFields.password = null;
+        }
+      }
+
+      const result = await userRepository.update(id, updateFields);
+      
+      if (result.affected === 0) {
+        throw new Error('사용자 업데이트에 실패했습니다.');
+      }
+
+      logger.info(`[UserModel-update] 사용자 업데이트 완료. ID: ${id}`);
+      return await this.findById(id);
+      
+    } catch (error) {
+      logger.error(`[UserModel-update] 오류: ${error.message}`, { id, updateData, stack: error.stack });
+      
+      if (error.code === 'ER_DUP_ENTRY' || (error.driverError && error.driverError.code === 'ER_DUP_ENTRY')) {
+        if (error.message.includes('users.email_unique')) {
+          throw new Error(`이미 사용 중인 이메일 주소입니다: ${updateData.email}`);
+        } else if (error.message.includes('users.username_unique')) {
+          throw new Error(`이미 사용 중인 사용자 이름입니다: ${updateData.username}`);
+        }
+      }
+      throw error;
+    }
   }
 };
 
