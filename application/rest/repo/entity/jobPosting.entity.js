@@ -89,6 +89,12 @@ const JobPostingEntity = new EntitySchema({
             nullable: false,
             comment: "공고 상태 (recruiting: 모집중, closed: 마감)"
         },
+        is_payroll_completed: {
+            type: "boolean",
+            default: false,
+            nullable: false,
+            comment: "급여 지급 완료 여부"
+        },
         view_count: {
             type: "int",
             default: 0,

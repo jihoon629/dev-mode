@@ -58,8 +58,8 @@ const JobPostingModel = {
             .select('COUNT(*)', 'approvedApplicantCount')
             .from('job_applications', 'application')
             .where('application.job_posting_id = posting.id')
-            .andWhere("application.status = 'approved'");
-        }, 'approvedApplicantCount')
+            .andWhere("application.status = 'completed'");
+        }, 'completedApplicantCount')
         .orderBy('posting.created_at', 'DESC');
 
       const postings = await queryBuilder.getRawAndEntities();
@@ -67,7 +67,8 @@ const JobPostingModel = {
       return postings.entities.map((entity, index) => ({
         ...entity,
         applicantCount: parseInt(postings.raw[index].applicantCount, 10),
-        approvedApplicantCount: parseInt(postings.raw[index].approvedApplicantCount, 10),
+        completedApplicantCount: parseInt(postings.raw[index].completedApplicantCount, 10),
+        is_payroll_completed: postings.raw[index].posting_is_payroll_completed, // is_payroll_completed 추가
       }));
 
     } catch (error) {
@@ -299,6 +300,20 @@ const JobPostingModel = {
     } catch (error) {
       logger.error(`[JobPostingModel-findByDistance] 오류: ${error.message}`, { latitude, longitude, distance, stack: error.stack });
       throw error;
+    }
+  },
+
+  async updatePayrollCompletedStatus(jobPostingId, status) {
+    try {
+        const result = await jobPostingRepository.update(jobPostingId, { is_payroll_completed: status });
+        if (result.affected === 0) {
+            throw new Error('공고를 찾을 수 없습니다.');
+        }
+        logger.info(`[JobPostingModel-updatePayrollCompletedStatus] 공고 ${jobPostingId} 급여 지급 완료 상태 업데이트: ${status}`);
+        return true;
+    } catch (error) {
+        logger.error(`[JobPostingModel-updatePayrollCompletedStatus] 오류: ${error.message}`, { jobPostingId, status, stack: error.stack });
+        throw error;
     }
   }
 };

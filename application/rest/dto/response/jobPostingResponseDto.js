@@ -22,7 +22,8 @@ class JobPostingResponseDto {
         this.distance = posting.distance; // 거리 필드 추가
         this.location = posting.location; // location 필드 추가
         this.applicantCount = posting.applicantCount; // 지원자 수 필드 추가
-        this.approvedApplicantCount = posting.approvedApplicantCount; // 승인된 지원자 수 필드 추가
+        this.completedApplicantCount = posting.completedApplicantCount; // 완료된 지원자 수 필드 추가
+        this.isPayrollCompleted = posting.is_payroll_completed; // 급여 지급 완료 여부 필드 추가
         
         if (posting.user) {
             this.user = {

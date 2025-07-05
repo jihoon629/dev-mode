@@ -1,10 +1,12 @@
 // application/rest/controller/jobApplicationController.js
-const jobApplicationService = require('../service/jobApplicationService');
+const JobApplicationServiceClass = require('../service/jobApplicationService');
 const { JobApplicationListResponseDto, JobApplicationResponseDto } = require('../dto/response/jobApplicationResponseDto');
 const logger = require('../config/logger');
 
+
 class JobApplicationController {
     constructor() {
+        this.jobApplicationService = new JobApplicationServiceClass();
         this.applyToJob = this.applyToJob.bind(this);
         this.getApplicationsForJob = this.getApplicationsForJob.bind(this);
         this.getMyApplications = this.getMyApplications.bind(this);
@@ -12,6 +14,7 @@ class JobApplicationController {
         this.completeApplication = this.completeApplication.bind(this);
         this.recordPayment = this.recordPayment.bind(this);
         this.getMySalaries = this.getMySalaries.bind(this);
+        this.recordPaymentsForAllWorkers = this.recordPaymentsForAllWorkers.bind(this); // Add this line
     }
 
     async getMySalaries(req, res, next) {
@@ -27,7 +30,7 @@ class JobApplicationController {
             }
 
             logger.info(`[JobApplicationController-getMySalaries] Service 호출: applicantId=${applicantId}`);
-            const salaries = await jobApplicationService.getMySalaries(applicantId);
+            const salaries = await this.jobApplicationService.getMySalaries(applicantId);
             const responseDto = new JobApplicationListResponseDto(salaries);
 
             logger.info(`[JobApplicationController-getMySalaries] END: 급여 내역 ${salaries.length}건 조회 완료`);
@@ -56,7 +59,7 @@ class JobApplicationController {
             }
 
             // 서비스 호출 시 paymentDate만 전달
-            const updatedApplication = await jobApplicationService.recordPayment(applicationId, paymentDate, currentUserId);
+            const updatedApplication = await this.jobApplicationService.recordPayment(applicationId, paymentDate, currentUserId);
             const responseDto = new JobApplicationResponseDto(updatedApplication);
             res.status(200).json({
                 status: 'success',
@@ -83,7 +86,7 @@ class JobApplicationController {
                 return res.status(400).json({ message: '지원할 이력서 ID가 필요합니다.' });
             }
 
-            const application = await jobApplicationService.applyToJob(jobPostingId, applicantId, resumeId);
+            const application = await this.jobApplicationService.applyToJob(jobPostingId, applicantId, resumeId);
             const responseDto = new JobApplicationResponseDto(application);
             res.status(201).json({
                 status: 'success',
@@ -105,7 +108,7 @@ class JobApplicationController {
                 return res.status(401).json({ message: '로그인이 필요합니다.' });
             }
 
-            const applications = await jobApplicationService.getApplicationsForJob(jobPostingId, currentUserId);
+            const applications = await this.jobApplicationService.getApplicationsForJob(jobPostingId, currentUserId);
             const responseDto = new JobApplicationListResponseDto(applications);
             res.status(200).json({
                 status: 'success',
@@ -125,7 +128,7 @@ class JobApplicationController {
                 return res.status(401).json({ message: '로그인이 필요합니다.' });
             }
 
-            const applications = await jobApplicationService.getMyApplications(applicantId);
+            const applications = await this.jobApplicationService.getMyApplications(applicantId);
             const responseDto = new JobApplicationListResponseDto(applications);
             res.status(200).json({
                 status: 'success',
@@ -150,7 +153,7 @@ class JobApplicationController {
                 return res.status(400).json({ message: '상태 값은 "approved" 또는 "rejected" 여야 합니다.' });
             }
 
-            const updatedApplication = await jobApplicationService.updateApplicationStatus(applicationId, status, currentUserId);
+            const updatedApplication = await this.jobApplicationService.updateApplicationStatus(applicationId, status, currentUserId);
             const responseDto = new JobApplicationResponseDto(updatedApplication);
             res.status(200).json({
                 status: 'success',
@@ -172,7 +175,7 @@ class JobApplicationController {
                 return res.status(401).json({ message: '로그인이 필요합니다.' });
             }
 
-            const completedApplication = await jobApplicationService.completeApplication(applicationId, currentUserId);
+            const completedApplication = await this.jobApplicationService.completeApplication(applicationId, currentUserId);
             const responseDto = new JobApplicationResponseDto(completedApplication);
             res.status(200).json({
                 status: 'success',
@@ -198,7 +201,7 @@ class JobApplicationController {
                 return res.status(400).json({ message: '급여 지급일과 급여액을 모두 입력해야 합니다.' });
             }
 
-            const updatedApplication = await jobApplicationService.updatePaymentInfo(applicationId, paymentDate, paymentAmount, currentUserId);
+            const updatedApplication = await this.jobApplicationService.updatePaymentInfo(applicationId, paymentDate, paymentAmount, currentUserId);
             const responseDto = new JobApplicationResponseDto(updatedApplication);
             res.status(200).json({
                 status: 'success',
@@ -210,6 +213,32 @@ class JobApplicationController {
             next(error);
         }
     }
+
+    async recordPaymentsForAllWorkers(req, res, next) {
+        try {
+            const jobPostingId = parseInt(req.params.id, 10);
+            const { paymentDate } = req.body; // paymentDate 추가
+            const currentUserId = req.user.id;
+
+            if (!currentUserId) {
+                return res.status(401).json({ message: '로그인이 필요합니다.' });
+            }
+            if (!paymentDate) { // paymentDate 유효성 검사 추가
+                return res.status(400).json({ message: '급여 지급일을 입력해야 합니다.' });
+            }
+
+            const result = await this.jobApplicationService.recordPaymentsForAllApplications(jobPostingId, paymentDate, currentUserId); // paymentDate 전달
+            res.status(200).json({
+                status: 'success',
+                message: `총 ${result.successCount}건의 급여가 성공적으로 기록되었고, ${result.failCount}건은 실패했습니다.`,
+                data: result.failedApplications,
+            });
+        } catch (error) {
+            logger.error(`[JobApplicationController-recordPaymentsForAllWorkers] 오류: ${error.message}`, { params: req.params, body: req.body, user: req.user, stack: error.stack });
+            next(error);
+        }
+    }
+
 }
 
 module.exports = new JobApplicationController();
