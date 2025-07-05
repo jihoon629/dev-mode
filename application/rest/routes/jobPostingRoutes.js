@@ -1,6 +1,7 @@
 // application/rest/routes/jobPostingRoutes.js
 const express = require('express');
 const jobPostingController = require('../controller/jobPostingController');
+const passport = require('passport');
 const router = express.Router();
 
 // --- 라우트 순서 중요 ---
@@ -41,5 +42,9 @@ router.put('/:id', jobPostingController.updateJobPosting);
 // 공고 삭제
 // DELETE /api/job-postings/:id
 router.delete('/:id', jobPostingController.deleteJobPosting);
+
+// 공고 상태 수정
+// PUT /api/job-postings/:id/status
+router.put('/:id/status', passport.authenticate('jwt', { session: false }), jobPostingController.updateJobPostingStatus);
 
 module.exports = router;

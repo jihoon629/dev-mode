@@ -23,6 +23,7 @@ class JobPostingController {
         this.searchJobPostings = this.searchJobPostings.bind(this);
         this.searchJobPostingsBySimilarity = this.searchJobPostingsBySimilarity.bind(this);
         this.searchJobPostingsByDistance = this.searchJobPostingsByDistance.bind(this);
+        this.updateJobPostingStatus = this.updateJobPostingStatus.bind(this);
     }
 
     async getAllJobPostings(req, res, next) {
@@ -206,6 +207,37 @@ class JobPostingController {
         } catch (error) {
             logger.error(`[JobPostingController-searchJobPostingsByDistance] 오류: ${error.message}`,
               { query: req.query, stack: error.stack });
+            next(error);
+        }
+    }
+
+    async updateJobPostingStatus(req, res, next) {
+        try {
+            validateIdParam(req.params);
+            const { status } = req.body;
+            const currentUserId = req.user.id;
+
+            if (!currentUserId) {
+                return res.status(401).json({ message: '로그인이 필요합니다.' });
+            }
+
+            if (!status || !['recruiting', 'closed'].includes(status)) {
+                return res.status(400).json({ message: '상태 값은 "recruiting" 또는 "closed" 여야 합니다.' });
+            }
+
+            const updatedJobPosting = await jobPostingService.updateJobPostingStatus(parseInt(req.params.id), status, currentUserId);
+            const responseDto = new JobPostingResponseDto(updatedJobPosting);
+
+            res.json({
+                status: 'success',
+                message: '공고 상태가 성공적으로 업데이트되었습니다.',
+                data: responseDto
+            });
+
+        } catch (error) {
+            logger.error(`[JobPostingController-updateJobPostingStatus] 오류: ${error.message}`, {
+                params: req.params, body: req.body, user: req.user, stack: error.stack
+            });
             next(error);
         }
     }

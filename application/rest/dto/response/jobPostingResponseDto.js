@@ -16,10 +16,13 @@ class JobPostingResponseDto {
         this.workHours = posting.work_hours;
         this.contactInfo = posting.contact_info;
         this.viewCount = posting.view_count;
+        this.status = posting.status; // status 필드 추가
         this.createdAt = posting.created_at;
         this.updatedAt = posting.updated_at;
         this.distance = posting.distance; // 거리 필드 추가
         this.location = posting.location; // location 필드 추가
+        this.applicantCount = posting.applicantCount; // 지원자 수 필드 추가
+        this.approvedApplicantCount = posting.approvedApplicantCount; // 승인된 지원자 수 필드 추가
         
         if (posting.user) {
             this.user = {

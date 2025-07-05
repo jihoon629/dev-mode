@@ -44,12 +44,32 @@ const JobPostingModel = {
 
   async findByUserId(userId) {
     try {
-      const postings = await jobPostingRepository.find({
-        where: { user_id: userId },
-        relations: ['user'],
-        order: { created_at: 'DESC' }
-      });
-      return postings;
+      const queryBuilder = jobPostingRepository.createQueryBuilder('posting')
+        .leftJoinAndSelect('posting.user', 'user')
+        .where('posting.user_id = :userId', { userId })
+        .addSelect(subQuery => {
+          return subQuery
+            .select('COUNT(*)', 'applicantCount')
+            .from('job_applications', 'application')
+            .where('application.job_posting_id = posting.id');
+        }, 'applicantCount')
+        .addSelect(subQuery => {
+          return subQuery
+            .select('COUNT(*)', 'approvedApplicantCount')
+            .from('job_applications', 'application')
+            .where('application.job_posting_id = posting.id')
+            .andWhere("application.status = 'approved'");
+        }, 'approvedApplicantCount')
+        .orderBy('posting.created_at', 'DESC');
+
+      const postings = await queryBuilder.getRawAndEntities();
+
+      return postings.entities.map((entity, index) => ({
+        ...entity,
+        applicantCount: parseInt(postings.raw[index].applicantCount, 10),
+        approvedApplicantCount: parseInt(postings.raw[index].approvedApplicantCount, 10),
+      }));
+
     } catch (error) {
       logger.error(`[JobPostingModel-findByUserId] 오류: ${error.message}`, { userId, stack: error.stack });
       throw error;
@@ -71,11 +91,12 @@ const JobPostingModel = {
 
   async findActivePostings(filters = {}) {
     try {
-      const { jobType, region, minWage, maxWage, startDate, endDate, limit = 20, offset = 0 } = filters;
+      const { jobType, region, minWage, maxWage, startDate, endDate, status = 'recruiting', limit = 20, offset = 0 } = filters;
       
       let queryBuilder = jobPostingRepository.createQueryBuilder('posting')
         .leftJoinAndSelect('posting.user', 'user')
         .where('posting.is_active = :isActive', { isActive: true })
+        .andWhere('posting.status = :status', { status })
         .andWhere('user.role = :role', { role: 'employer' });
 
       if (jobType) {
@@ -183,6 +204,20 @@ const JobPostingModel = {
     }
   },
 
+  async updateStatus(id, status) {
+    try {
+      const result = await jobPostingRepository.update(id, { status });
+      if (result.affected === 0) {
+        throw new Error('공고를 찾을 수 없습니다.');
+      }
+      logger.info(`[JobPostingModel-updateStatus] 공고 상태 업데이트 완료. ID: ${id}, 상태: ${status}`);
+      return await this.findById(id);
+    } catch (error) {
+      logger.error(`[JobPostingModel-updateStatus] 오류: ${error.message}`, { id, status, stack: error.stack });
+      throw error;
+    }
+  },
+
   async searchByKeyword(keyword, limit = 10) {
     try {
       const postings = await jobPostingRepository.createQueryBuilder('posting')
@@ -209,7 +244,7 @@ const JobPostingModel = {
   async findAllActive() {
     try {
       const postings = await jobPostingRepository.find({
-        where: { is_active: true },
+        where: { is_active: true, status: 'recruiting' },
         relations: ['user'],
         order: { created_at: 'DESC' }
       });

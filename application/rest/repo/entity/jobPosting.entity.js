@@ -82,6 +82,13 @@ const JobPostingEntity = new EntitySchema({
             nullable: false,
             comment: "공고 활성화 상태"
         },
+        status: {
+            type: "varchar",
+            length: 20,
+            default: "recruiting",
+            nullable: false,
+            comment: "공고 상태 (recruiting: 모집중, closed: 마감)"
+        },
         view_count: {
             type: "int",
             default: 0,

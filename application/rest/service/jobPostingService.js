@@ -124,6 +124,17 @@ class JobPostingService {
     }
     return postings;
   }
+
+  async updateJobPostingStatus(id, status, currentUserId) {
+    const posting = await JobPostingModel.findById(id);
+    if (!posting) {
+      throw new Error('공고를 찾을 수 없습니다.');
+    }
+    if (posting.user_id !== currentUserId) {
+      throw new Error('자신이 등록한 공고의 상태만 변경할 수 있습니다.');
+    }
+    return await JobPostingModel.updateStatus(id, status);
+  }
 }
 
 module.exports = new JobPostingService();
