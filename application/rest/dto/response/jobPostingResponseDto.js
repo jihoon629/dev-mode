@@ -37,7 +37,7 @@ class JobPostingResponseDto {
         if (posting.recommendation) {
             this.recommendation = {
                 matchScore: posting.recommendation.matchScore,
-                reason: posting.recommendation.reason
+                reasonDetails: posting.recommendation.reasonDetails // reasonDetails 추가
             };
         }
     }
