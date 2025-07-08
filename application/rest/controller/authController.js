@@ -22,7 +22,7 @@ class AuthController {
 
   async logout(req, res, next) {
     try {
-      res.clearCookie('token', { path: '/' }); // 토큰 쿠키 삭제
+      // res.clearCookie('token', { path: '/' }); // 토큰 쿠키 삭제 (세션 스토리지 사용 시 불필요)
       res.status(200).json({ message: '로그아웃되었습니다.' });
     } catch (error) {
       next(error);
@@ -81,18 +81,9 @@ class AuthController {
       );
       const isProduction = process.env.NODE_ENV === 'production';
 
-      // JWT를 HTTP-only 쿠키로 설정
-      res.cookie('token', authServiceResult.token, {
-        httpOnly: true,
-        secure: isProduction,
-        sameSite: isProduction ? 'None' : 'Lax',
-        maxAge: 3600 * 1000,
-        path: '/'
-      });
-
       const responseDto = new LoginSuccessResponseDto(
         authServiceResult.message || '로그인 성공',
-        null, // 토큰은 쿠키로 전송되므로 응답 본문에서는 제거
+        authServiceResult.token, // 토큰을 응답 본문에 포함
         userResponse
       );
       res.status(200).json(responseDto);
@@ -113,17 +104,7 @@ class AuthController {
         email: req.user.email,
       };
 
-      const isProduction = process.env.NODE_ENV === 'production';
-      const token = jwt.sign(payload, jwtConfig.secret, { expiresIn: jwtConfig.expiresIn });
-      res.cookie('token', token, {
-        httpOnly: true,
-        secure: isProduction,
-        sameSite: isProduction ? 'None' : 'Lax',
-        maxAge: 3600 * 1000,
-        path: '/'
-      });
-
-      res.redirect(`${FRONTEND_URL}/auth/social-callback`); // 토큰 없이 리다이렉트
+      res.redirect(`${FRONTEND_URL}/auth/social-callback?token=${token}`); // 토큰을 쿼리 파라미터로 전달
     } catch (error) {
       next(error);
     }

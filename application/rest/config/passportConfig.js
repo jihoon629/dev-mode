@@ -10,18 +10,7 @@ const logger = require('./logger'); // logger 추가
 
 // JWT Strategy Options
 const jwtOptions = {
-  jwtFromRequest: ExtractJwt.fromExtractors([
-    (req) => {
-      let token = null;
-      if (req && req.cookies) {
-        token = req.cookies['token'];
-        logger.debug(`[Passport JWT] Token found in cookies: ${token}`);
-      } else {
-        logger.debug('[Passport JWT] No cookies found on request.');
-      }
-      return token;
-    },
-  ]),
+  jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
   secretOrKey: jwtConfig.secret,
 };
 

@@ -4,7 +4,7 @@ import express from 'express';
 import morgan from 'morgan';
 import path from 'path';
 import cors from 'cors';
-import cookieParser from 'cookie-parser'; // cookie-parser 추가
+
 import { fileURLToPath } from 'url';
 import passport from './config/passportConfig.js';
 import logger from './config/logger.js';
@@ -38,32 +38,22 @@ function setupMiddlewares() {
   // 기본 미들웨어
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
-  app.use(cookieParser()); // cookie-parser 미들웨어 사용
+  // app.use(cookieParser()); // cookie-parser 미들웨어 사용 (세션 스토리지 사용 시 불필요)
   app.use(passport.initialize());
 
-  // const whitelist = ['http://localhost:3000', 'http://172.30.112.48:3000', 'http://172.30.98.6:3000','http://192.168.56.1:3000','http://172.30.98.6:3000'];
-  // const corsOptions = {
-  //   origin: function (origin, callback) {
-  //     if (whitelist.indexOf(origin) !== -1 || !origin) {
-  //       callback(null, true);
-  //     } else {
-  //       callback(new Error('Not allowed by CORS'));
-  //     }
-  //   },
-  // };
-  
-  // app.use(cors(corsOptions));
   app.use(cors({
-    origin: true, // 모든 origin 허용
-    credentials: true, // 쿠키 등 자격 증명 허용
+    origin: ['https://sipjang.vercel.app'], // Vercel 도메인만 허용
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Cookie', 'ngrok-skip-browser-warning'],
+    optionsSuccessStatus: 200
   }));
-  
 
   // 요청 로깅 미들웨어 추가
   app.use((req, res, next) => {
     logger.info(`[Request Logger] Path: ${req.path}, Method: ${req.method}`);
     logger.debug('[Request Logger] Headers:', req.headers);
-    logger.debug('[Request Logger] Cookies:', req.cookies); // req.cookies를 로그로 남김
+    // logger.debug('[Request Logger] Cookies:', req.cookies); // req.cookies를 로그로 남김 (세션 스토리지 사용 시 불필요)
     next();
   });
 
