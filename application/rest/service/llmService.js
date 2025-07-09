@@ -21,7 +21,7 @@ const apiKey =process.env.API;
             
             const msg = await this.anthropic.messages.create({
                 model: this.model,
-                max_tokens: 1024,
+                max_tokens: 2048,
                 messages: [{ role: 'user', content: prompt }],
                 temperature: 0, // 일관된 결과를 위해 temperature를 0으로 설정
             });
