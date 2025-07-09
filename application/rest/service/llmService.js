@@ -1,41 +1,37 @@
 // application/rest/service/llmService.js
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const Anthropic = require('@anthropic-ai/sdk');
 const logger = require('../config/logger');
-
 class LLMService {
     constructor() {
-        const apiKey = process.env.GEMINI_API_KEY;
+
+const apiKey =process.env.API;
+
         if (!apiKey) {
-            logger.error('[LLMService] GEMINI_API_KEY 환경변수가 설정되지 않았습니다.');
-            throw new Error('GEMINI_API_KEY is required');
+            logger.error('[LLMService] ANTHROPIC_API_KEY 환경변수가 설정되지 않았습니다.');
+            throw new Error('ANTHROPIC_API_KEY is required');
         }
         
-        this.genAI = new GoogleGenerativeAI(apiKey);
-        this.model = this.genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+        this.anthropic = new Anthropic({ apiKey });
+        this.model = 'claude-3-5-haiku-20241022'; // 올바른 모델명
     }
 
-    async generateTextWithGemini(prompt) {
+    async generateTextWithClaude(prompt) {
         try {
-            logger.info(`[LLMService] Gemini 텍스트 생성 요청: ${prompt.substring(0, 100)}...`);
+            logger.info(`[LLMService] Claude 텍스트 생성 요청: ${prompt.substring(0, 100)}...`);
             
-            // 일관된 결과를 위해 temperature를 0으로 설정
-            const generationConfig = {
-                temperature: 0,
-            };
-
-            const result = await this.model.generateContent({
-                contents: [{ role: "user", parts: [{ text: prompt }] }],
-                generationConfig,
+            const msg = await this.anthropic.messages.create({
+                model: this.model,
+                max_tokens: 1024,
+                messages: [{ role: 'user', content: prompt }],
+                temperature: 0, // 일관된 결과를 위해 temperature를 0으로 설정
             });
 
-            const response = await result.response;
-            const text = response.text();
-            
-            logger.info(`[LLMService] Gemini 응답 성공 (길이: ${text.length})`);
+            const text = msg.content[0].text;
+            logger.info(`[LLMService] Claude 응답 성공 (길이: ${text.length})`);
             return text;
             
         } catch (error) {
-            logger.error(`[LLMService] Gemini 요청 실패: ${error.message}`, { stack: error.stack });
+            logger.error(`[LLMService] Claude 요청 실패: ${error.message}`, { stack: error.stack });
             throw error;
         }
     }
@@ -44,36 +40,20 @@ class LLMService {
         try {
             logger.info(`[LLMService] Function Calling 요청 시작`);
             logger.info(`[LLMService] 사용 가능한 함수: ${Object.keys(availableFunctions).join(', ')}`);
-            
-            // 함수 선언을 Gemini 형식으로 변환
-            const functionDeclarations = Object.keys(availableFunctions).map(funcName => {
-                const func = availableFunctions[funcName];
-                
-                // 기본 함수 스키마 정의
-                let schema = {
+
+            const tools = Object.keys(availableFunctions).map(funcName => {
+                return {
                     name: funcName,
                     description: this.getFunctionDescription(funcName),
-                    parameters: {
+                    input_schema: {
                         type: "object",
                         properties: this.getFunctionParameters(funcName),
                         required: this.getRequiredParameters(funcName)
                     }
                 };
-
-                return schema;
             });
 
-            // Gemini에 function calling 요청
-            const modelWithTools = this.genAI.getGenerativeModel({
-                model: 'gemini-1.5-flash',
-                tools: [{
-                    functionDeclarations: functionDeclarations
-                }]
-            });
-
-            let conversationHistory = [];
-            let result = await modelWithTools.generateContent(prompt);
-            let response = await result.response;
+            let messages = [{ role: 'user', content: prompt }];
             
             let finalResult = '';
             let maxIterations = 10; // 무한 루프 방지
@@ -83,89 +63,90 @@ class LLMService {
                 iteration++;
                 logger.info(`[LLMService] Function Calling 반복 ${iteration}`);
 
-                const functionCalls = response.functionCalls();
-                
-                if (!functionCalls || functionCalls.length === 0) {
-                    // Function call이 없으면 최종 응답 반환
-                    finalResult = response.text();
+                const response = await this.anthropic.messages.create({
+                    model: this.model,
+                    max_tokens: 1024,
+                    messages: messages,
+                    tools: tools,
+                });
+
+                // assistant 메시지 추가 (response 자체가 아닌 적절한 형태로)
+                messages.push({
+                    role: 'assistant',
+                    content: response.content
+                });
+
+                const toolUses = response.content.filter(c => c.type === 'tool_use');
+
+                if (toolUses.length === 0) {
+                    finalResult = response.content.find(c => c.type === 'text')?.text || '';
                     logger.info(`[LLMService] 최종 응답 생성 완료`);
                     break;
                 }
 
-                // Function call 실행
-                const functionResponses = [];
-                for (const functionCall of functionCalls) {
-                    const { name, args } = functionCall;
-                    logger.info(`[LLMService] 함수 실행: ${name}`, args);
-                    
+                const toolResults = [];
+                for (const toolUse of toolUses) {
+                    const { name, id, input } = toolUse;
+                    logger.info(`[LLMService] 함수 실행: ${name}`, input);
+
                     if (availableFunctions[name]) {
                         try {
-                            const functionResult = await availableFunctions[name](...Object.values(args));
-                            const responseData = {
-                                name: name,
-                                response: {
-                                    result: functionResult,
-                                    success: true
-                                }
-                            };
-                            functionResponses.push(responseData);
+                            const functionResult = await availableFunctions[name](...Object.values(input));
+                            toolResults.push({
+                                tool_use_id: id,
+                                content: JSON.stringify(functionResult), // 배열 형태가 아닌 문자열로
+                                is_error: false
+                            });
                             logger.info(`[LLMService] 함수 ${name} 실행 성공`);
                         } catch (funcError) {
-                            const errorResponse = {
-                                name: name,
-                                response: {
-                                    error: funcError.message,
-                                    success: false
-                                }
-                            };
-                            functionResponses.push(errorResponse);
+                            toolResults.push({
+                                tool_use_id: id,
+                                content: funcError.message,
+                                is_error: true
+                            });
                             logger.error(`[LLMService] 함수 ${name} 실행 실패: ${funcError.message}`);
                         }
                     } else {
                         logger.error(`[LLMService] 함수 ${name}을 찾을 수 없습니다`);
-                        functionResponses.push({
-                            name: name,
-                            response: {
-                                error: `Function ${name} not found`,
-                                success: false
-                            }
+                        toolResults.push({
+                            tool_use_id: id,
+                            content: `Function ${name} not found`,
+                            is_error: true
                         });
                     }
                 }
-
-                // 다음 턴을 위해 function 결과를 포함하여 요청
-                conversationHistory.push({
-                    role: 'user',
-                    parts: [{ text: prompt }]
-                });
                 
-                conversationHistory.push({
-                    role: 'model',
-                    parts: functionCalls.map(fc => ({
-                        functionCall: {
-                            name: fc.name,
-                            args: fc.args
-                        }
-                    }))
-                });
+                // 모든 tool results를 한번에 처리
+                const toolResultContent = toolResults.map(result => ({
+                    type: 'tool_result',
+                    tool_use_id: result.tool_use_id,
+                    content: result.content,
+                    is_error: result.is_error
+                }));
 
-                conversationHistory.push({
+                messages.push({
                     role: 'user',
-                    parts: functionResponses.map(fr => ({
-                        functionResponse: fr
-                    }))
+                    content: toolResultContent
                 });
-
-                // 대화 히스토리와 함께 다음 응답 생성
-                result = await modelWithTools.generateContent({
-                    contents: conversationHistory
-                });
-                response = await result.response;
             }
 
             if (iteration >= maxIterations) {
                 logger.warn(`[LLMService] 최대 반복 횟수 도달`);
-                finalResult = response.text() || '분석이 완료되었지만 최대 반복 횟수에 도달했습니다.';
+                finalResult = '분석이 완료되었지만 최대 반복 횟수에 도달했습니다.';
+            }
+            
+            // Get the final text response from the last assistant message if it exists
+            if (!finalResult) {
+                for (let i = messages.length - 1; i >= 0; i--) {
+                    const message = messages[i];
+                    if (message.role === 'assistant') {
+                        const textContent = message.content.find(c => c.type === 'text');
+                        if (textContent) {
+                            finalResult = textContent.text;
+                            break;
+                        }
+                    }
+                }
             }
 
             logger.info(`[LLMService] Function Calling 완료 (${iteration}회 반복)`);

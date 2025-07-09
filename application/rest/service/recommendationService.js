@@ -31,7 +31,7 @@ class RecommendationService {
     const prompt = this.createRecommendationPrompt(resume, allJobPostings);
     
     // 4. LLM 서비스 호출
-    const llmResponse = await llmService.generateTextWithGemini(prompt);
+        const llmResponse = await llmService.generateTextWithClaude(prompt);
     
     // 5. LLM 응답 파싱 및 결과 반환
     const recommendations = this.parseLlmResponse(llmResponse, allJobPostings);
