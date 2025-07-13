@@ -16,6 +16,6 @@ if [ ! -d "wallet" ] ; then
 fi
 
 cd $GOPATH/src/dev-mode/application/rest
-node server.js
+node server.mjs
 echo "서버 실행 명령 => node server.js"
 

@@ -2,6 +2,8 @@ basic-network/bin
 application/node_modules
 application/connection-org1.json
 application/wallet
+application/logs
+
 chaincode/abstore/go/go
 
 basic-network/channel-artifacts
@@ -15,3 +17,4 @@ basic-network/organizations/fabric-ca/org3
 
 explorer/pgdata
 explorer/wallet
+application/.env

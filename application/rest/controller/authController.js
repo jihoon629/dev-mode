@@ -1,47 +1,114 @@
-    // application/rest/controller/authController.js
-    const AuthService = require('../service/authService');
+// application/rest/controller/authController.js
+const authServiceInstance = require('../service/authService');
+const jwt = require('jsonwebtoken');
+const jwtConfig = require('../config/jwtConfig');
+const { validateRegistration, validateLogin } = require('../utils/validation/authValidation');
+const { handleValidationError } = require('../utils/errorHandler');
+const { RegisterUserRequestDto, LoginUserRequestDto } = require('../dto/request/authRequstDto');
+const { UserResponseDto, RegistrationSuccessResponseDto, LoginSuccessResponseDto } = require('../dto/response/authResponseDto');
 
-    const AuthController = {
-      // 회원가입 요청 처리
-      async register(req, res, next) {
-        try {
-          const { username, email, password } = req.body;
-          // AuthService의 register 함수 호출
-          const user = await AuthService.register(username, email, password);
-          // 성공 응답: 201 Created
-          res.status(201).json({
-            message: '회원가입이 성공적으로 완료되었습니다.',
-            user // user 객체에는 id, username, email이 포함됨 (비밀번호 제외)
-          });
-        } catch (error) {
-          // AuthService에서 던진 오류 또는 여기서 발생한 오류를 next로 전달하여
-          // 중앙 에러 처리 미들웨어에서 처리하도록 함 (아직 없다면 콘솔에 로깅 후 500 에러 반환)
-          console.error('Error in AuthController.register:', error.message);
-          // res.status(400).json({ message: error.message || '회원가입 중 오류가 발생했습니다.' });
-          next(error); // 중앙 에러 핸들러로 전달
-        }
-      },
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
-      // 로그인 요청 처리
-      async login(req, res, next) {
-        try {
-          const { usernameOrEmail, password } = req.body;
-          // AuthService의 login 함수 호출
-          const result = await AuthService.login(usernameOrEmail, password);
-          // 성공 응답: 200 OK, 토큰과 사용자 정보 반환
-          res.status(200).json({
-            message: '로그인 성공',
-            token: result.token,
-            user: result.user // user 객체에는 id, username, email 등이 포함됨
-          });
-        } catch (error) {
-          console.error('Error in AuthController.login:', error.message);
-          // res.status(401).json({ message: error.message || '로그인 중 오류가 발생했습니다.' });
-          next(error); // 중앙 에러 핸들러로 전달
-        }
+class AuthController {
+
+  constructor() {
+    this.authService = authServiceInstance;
+    this.register = this.register.bind(this);
+    this.login = this.login.bind(this);
+    this.handleGoogleCallback = this.handleGoogleCallback.bind(this);
+    this.getMe = this.getMe.bind(this);
+    this.logout = this.logout.bind(this); // logout 바인딩 추가
+  }
+
+  async logout(req, res, next) {
+    try {
+      // res.clearCookie('token', { path: '/' }); // 토큰 쿠키 삭제 (세션 스토리지 사용 시 불필요)
+      res.status(200).json({ message: '로그아웃되었습니다.' });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getMe(req, res, next) {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Not authenticated' });
+      }
+      res.status(200).json({ id: req.user.id, username: req.user.username, email: req.user.email,role: req.user.role });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async register(req, res, next) {
+    try {
+      const { username, email, password, role } = req.body;
+      validateRegistration(username, email, password, role);
+
+      const registerDto = new RegisterUserRequestDto(username, email, password, role);
+      const registeredUserData = await this.authService.register(
+        registerDto.username,
+        registerDto.email,
+        registerDto.password,
+        registerDto.role
+      );
+
+      const userResponse = new UserResponseDto(registeredUserData.id, registeredUserData.username, registeredUserData.email);
+      const responseDto = new RegistrationSuccessResponseDto('회원가입이 성공적으로 완료되었습니다.', userResponse);
+
+      res.status(201).json(responseDto);
+    } catch (error) {
+      handleValidationError(error, next);
+    }
+  }
+
+  async login(req, res, next) {
+    try {
+      const { email, password } = req.body;
+      validateLogin(email, password);
+
+      const loginDto = new LoginUserRequestDto(email, password);
+      const authServiceResult = await this.authService.login(
+        loginDto.email,
+        loginDto.password
+      );
+
+      const userResponse = new UserResponseDto(
+        authServiceResult.id,
+        authServiceResult.username,
+        authServiceResult.email,
+        authServiceResult.role
+      );
+      const isProduction = process.env.NODE_ENV === 'production';
+
+      const responseDto = new LoginSuccessResponseDto(
+        authServiceResult.message || '로그인 성공',
+        authServiceResult.token, // 토큰을 응답 본문에 포함
+        userResponse
+      );
+      res.status(200).json(responseDto);
+    } catch (error) {
+      handleValidationError(error, next);
+    }
+  }
+
+  async handleGoogleCallback(req, res, next) {
+    try {
+      if (!req.user) {
+        return res.redirect(`${FRONTEND_URL}/login?error=GoogleAuthenticationFailedUpstream`);
       }
 
-      // TODO: (선택 사항) /me (내 정보 보기), /logout 등의 컨트롤러 함수 추가 가능
-    };
+      const payload = {
+        id: req.user.id,
+        username: req.user.username,
+        email: req.user.email,
+      };
 
-    module.exports = AuthController;
+      res.redirect(`${FRONTEND_URL}/auth/social-callback?token=${token}`); // 토큰을 쿼리 파라미터로 전달
+    } catch (error) {
+      next(error);
+    }
+  }
+}
+
+module.exports = new AuthController();
